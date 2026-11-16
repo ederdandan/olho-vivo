@@ -1,0 +1,2035 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="Olho Vivo — Jogo multiplayer de reflexo e percepção visual baseado em combinatória matemática." />
+  <title>Olho Vivo • Jogo de Reflexo & Par Rápido (4 Jogadores)</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23311042'/%3E%3Cstop offset='100%25' stop-color='%2311071f'/%3E%3C/linearGradient%3E%3ClinearGradient id='bolt' x1='0%25' y1='100%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%23ec4899'/%3E%3Cstop offset='50%25' stop-color='%23f97316'/%3E%3Cstop offset='100%25' stop-color='%23facc15'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='24' fill='url(%23bg)'/%3E%3Cpath d='M12 50 C28 24, 72 24, 88 50 C72 76, 28 76, 12 50 Z' fill='%23ffffff'/%3E%3Ccircle cx='50' cy='50' r='19' fill='%231e1b4b'/%3E%3Cpolygon points='50,36 53.5,46.5 64,50 53.5,53.5 50,64 46.5,53.5 36,50 46.5,46.5' fill='%2338bdf8'/%3E%3Cpolygon points='84,12 44,47 54,51 16,88 56,53 46,49' fill='url(%23bolt)'/%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Fredoka:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Tipografia e ajustes táteis mobile-first */
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #0f172a;
+      color: #f8fafc;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      overflow-x: hidden;
+    }
+
+    /* Estilo físico da carta de tabuleiro (suporta Redonda ou Quadrada Arredondada) */
+    .game-card {
+      background: radial-gradient(circle at 35% 30%, #ffffff 0%, #f8fafc 75%, #e2e8f0 100%);
+      box-shadow:
+        0 14px 30px -6px rgba(0, 0, 0, 0.45),
+        0 4px 10px -2px rgba(0, 0, 0, 0.25),
+        inset 0 2px 4px rgba(255, 255, 255, 0.9),
+        inset 0 -4px 8px rgba(148, 163, 184, 0.35);
+      border: 5px solid #ffffff;
+      position: relative;
+      border-radius: 9999px;
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, border-radius 0.3s ease;
+    }
+
+    body.card-shape-rounded .game-card {
+      border-radius: 2.25rem;
+    }
+
+    .game-card-ring {
+      position: absolute;
+      inset: 6px;
+      border-radius: inherit;
+      border: 2px dashed rgba(99, 102, 241, 0.22);
+      pointer-events: none;
+    }
+
+    /* Botão de símbolo com hitbox generosa */
+    .symbol-btn {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      border-radius: 9999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.15s ease;
+      touch-action: manipulation;
+    }
+
+    .symbol-btn:hover {
+      background-color: rgba(99, 102, 241, 0.12);
+    }
+
+    .symbol-btn:active {
+      transform: translate(-50%, -50%) scale(0.86);
+    }
+
+    /* ===================================================================== */
+    /* TEMAS VISUAIS INTERCAMBIÁVEIS (MANTENDO A MESMA MECÂNICA)              */
+    /* ===================================================================== */
+    /* 1. Tema Default (Atual - Dark Indigo) */
+    body.theme-default {
+      background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e1b4b 100%);
+      color: #f8fafc;
+    }
+
+    /* 2. Tema Clássico Lata (Inspirado na Lata Roxa/Amarela do Dobble) */
+    body.theme-classic {
+      background: radial-gradient(circle at 50% 0%, #7c3aed 0%, #4c1d95 55%, #2e1065 100%);
+      color: #fefce8;
+    }
+    body.theme-classic header {
+      background-color: rgba(46, 16, 101, 0.92);
+      border-color: rgba(250, 204, 21, 0.35);
+    }
+    body.theme-classic .app-surface {
+      background-color: rgba(59, 7, 100, 0.85);
+      border-color: rgba(250, 204, 21, 0.45);
+      box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(250, 204, 21, 0.2);
+    }
+    body.theme-classic .game-card {
+      background: radial-gradient(circle at 35% 30%, #ffffff 0%, #fef9c3 85%, #fde047 100%);
+      border: 6px solid #facc15;
+      box-shadow: 0 14px 28px rgba(0, 0, 0, 0.45), inset 0 2px 6px #ffffff;
+    }
+    body.theme-classic .game-card-ring {
+      border: 2px dashed rgba(124, 58, 237, 0.35);
+    }
+
+    /* 3. Tema Cyber Neon Arcade */
+    body.theme-neon {
+      background-color: #05050a;
+      background-image:
+        linear-gradient(rgba(6, 182, 212, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(236, 72, 153, 0.08) 1px, transparent 1px);
+      background-size: 28px 28px;
+      color: #ecfeff;
+    }
+    body.theme-neon header {
+      background-color: rgba(5, 5, 10, 0.92);
+      border-color: rgba(6, 182, 212, 0.4);
+    }
+    body.theme-neon .app-surface {
+      background-color: rgba(10, 12, 24, 0.92);
+      border-color: rgba(6, 182, 212, 0.5);
+      box-shadow: 0 0 30px rgba(6, 182, 212, 0.18), inset 0 0 20px rgba(236, 72, 153, 0.08);
+    }
+    body.theme-neon .game-card {
+      background: radial-gradient(circle at 50% 50%, #16192c 0%, #090b16 85%, #05060d 100%);
+      border: 4px solid #22d3ee;
+      box-shadow:
+        0 0 22px rgba(34, 211, 238, 0.45),
+        inset 0 0 18px rgba(232, 121, 249, 0.25);
+    }
+    body.theme-neon .game-card-ring {
+      border: 2px solid rgba(232, 121, 249, 0.45);
+    }
+    body.theme-neon .symbol-btn:hover {
+      background-color: rgba(34, 211, 238, 0.2);
+    }
+
+    /* 4. Tema Tabuleiro Madeira (Cozy / Papel Creme) */
+    body.theme-wood {
+      background: radial-gradient(circle at 50% 20%, #78350f 0%, #451a03 65%, #270e02 100%);
+      color: #fef3c7;
+    }
+    body.theme-wood header {
+      background-color: rgba(39, 14, 2, 0.92);
+      border-color: rgba(217, 119, 6, 0.35);
+    }
+    body.theme-wood .app-surface {
+      background-color: rgba(69, 26, 3, 0.88);
+      border-color: rgba(245, 158, 11, 0.35);
+      box-shadow: 0 20px 35px rgba(0, 0, 0, 0.55);
+    }
+    body.theme-wood .game-card {
+      background: radial-gradient(circle at 35% 30%, #fffbeb 0%, #fef3c7 75%, #fde68a 100%);
+      border: 6px solid #d97706;
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.45), inset 0 2px 4px #ffffff;
+    }
+    body.theme-wood .game-card-ring {
+      border: 2px dotted rgba(180, 83, 9, 0.38);
+    }
+
+    /* 5. Tema Clean Claro (Minimalista) */
+    body.theme-clean {
+      background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%);
+      color: #0f172a;
+    }
+    body.theme-clean header {
+      background-color: rgba(255, 255, 255, 0.9);
+      border-color: #cbd5e1;
+      color: #0f172a;
+    }
+    body.theme-clean header h1 {
+      color: #0f172a;
+    }
+    body.theme-clean header p {
+      color: #64748b;
+    }
+    body.theme-clean .app-surface {
+      background-color: #ffffff;
+      border-color: #cbd5e1;
+      color: #0f172a;
+      box-shadow: 0 20px 35px -10px rgba(15, 23, 42, 0.12);
+    }
+    body.theme-clean .app-surface h2,
+    body.theme-clean .app-surface h3 {
+      color: #0f172a;
+    }
+    body.theme-clean .app-surface .bg-slate-950\/90,
+    body.theme-clean .app-surface .bg-slate-950\/80,
+    body.theme-clean .app-surface .bg-slate-950\/70,
+    body.theme-clean .app-surface .bg-slate-950 {
+      background-color: #f8fafc !important;
+      border-color: #cbd5e1 !important;
+      color: #0f172a !important;
+    }
+    body.theme-clean .app-surface .text-slate-200,
+    body.theme-clean .app-surface .text-slate-300,
+    body.theme-clean .app-surface .text-white {
+      color: #1e293b !important;
+    }
+    body.theme-clean .app-surface .text-slate-400 {
+      color: #475569 !important;
+    }
+    body.theme-clean .game-card {
+      background: radial-gradient(circle at 35% 30%, #ffffff 0%, #f8fafc 85%, #f1f5f9 100%);
+      border: 5px solid #6366f1;
+      box-shadow: 0 14px 28px -6px rgba(99, 102, 241, 0.25), 0 4px 10px rgba(15, 23, 42, 0.08);
+    }
+    body.theme-clean .game-card-ring {
+      border: 2px dashed rgba(99, 102, 241, 0.28);
+    }
+
+    /* Animações táteis de feedback (Shake, Pop e Entrada de Carta) */
+    @keyframes cardShake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-8px) rotate(-2deg); }
+      40% { transform: translateX(8px) rotate(2deg); }
+      60% { transform: translateX(-6px) rotate(-1deg); }
+      80% { transform: translateX(6px) rotate(1deg); }
+    }
+    .animate-shake {
+      animation: cardShake 0.42s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+    }
+
+    @keyframes cardPop {
+      0% { transform: scale(0.86); opacity: 0.5; }
+      70% { transform: scale(1.04); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-pop {
+      animation: cardPop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+
+    @keyframes cardSlideIn {
+      0% { transform: translateY(-18px) scale(0.92); opacity: 0.35; }
+      100% { transform: translateY(0) scale(1); opacity: 1; }
+    }
+    .animate-card-in {
+      animation: cardSlideIn 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    @keyframes lastCardPulse {
+      0%, 100% { border-color: rgba(244, 63, 94, 0.55); }
+      50% { border-color: rgba(244, 63, 94, 1); box-shadow: 0 0 12px rgba(244, 63, 94, 0.35); }
+    }
+    .last-card-alert {
+      animation: lastCardPulse 1s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="theme-default min-h-screen flex flex-col justify-between transition-colors duration-300">
+
+  <!-- BARRA SUPERIOR DE VALIDAÇÃO DO PROTÓTIPO (LIMPA + MENU DE AJUSTES) -->
+  <header class="w-full bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-50 transition-colors duration-300">
+    <div class="max-w-5xl mx-auto px-3 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div class="flex items-center justify-between w-full sm:w-auto gap-2.5">
+        <div class="flex items-center gap-2.5">
+          <!-- Logo Oficial Olho Vivo (Estilo Opção 3: Olho Neon + Raio Diagonal) -->
+          <div class="w-10 h-10 rounded-xl shadow-lg shadow-fuchsia-500/25 overflow-hidden shrink-0 border border-fuchsia-400/30">
+            <svg viewBox="0 0 100 100" class="w-full h-full block" aria-label="Ícone Olho Vivo">
+              <defs>
+                <linearGradient id="ov-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#3b0764"/>
+                  <stop offset="55%" stop-color="#1e1b4b"/>
+                  <stop offset="100%" stop-color="#090d16"/>
+                </linearGradient>
+                <linearGradient id="ov-eye-rim" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#ec4899"/>
+                  <stop offset="100%" stop-color="#6366f1"/>
+                </linearGradient>
+                <linearGradient id="ov-bolt" x1="0%" y1="100%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#ec4899"/>
+                  <stop offset="50%" stop-color="#f97316"/>
+                  <stop offset="100%" stop-color="#facc15"/>
+                </linearGradient>
+                <linearGradient id="ov-star" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#22d3ee"/>
+                  <stop offset="50%" stop-color="#a855f7"/>
+                  <stop offset="100%" stop-color="#facc15"/>
+                </linearGradient>
+              </defs>
+              <rect width="100" height="100" rx="22" fill="url(#ov-bg)"/>
+              <path d="M12 50 C28 24, 72 24, 88 50 C72 76, 28 76, 12 50 Z" fill="#f8fafc" stroke="url(#ov-eye-rim)" stroke-width="4"/>
+              <circle cx="50" cy="50" r="18" fill="#17153b"/>
+              <polygon points="50,36 53.5,46.5 64,50 53.5,53.5 50,64 46.5,53.5 36,50 46.5,46.5" fill="url(#ov-star)"/>
+              <circle cx="57" cy="43" r="2.2" fill="#ffffff"/>
+              <polygon points="85,11 43,47 54,51 15,89 57,53 46,49" fill="url(#ov-bolt)" stroke="#17153b" stroke-width="2.2" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="font-display font-bold text-base sm:text-lg tracking-tight text-white">Olho Vivo</h1>
+              <span id="header-deck-pill" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                🎲 Clássico
+              </span>
+            </div>
+            <p class="text-[11px] text-slate-400">Par Relâmpago • 1 a 4 Jogadores</p>
+          </div>
+        </div>
+
+        <!-- Botão de Ajustes no Mobile -->
+        <button onclick="toggleSettingsModal()" class="sm:hidden px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition active:scale-95">
+          <span>⚙️</span> Ajustes
+        </button>
+      </div>
+
+      <!-- Abas de Navegação do Protótipo + Botão Ajustes -->
+      <nav class="flex flex-wrap items-center justify-center gap-1.5 bg-slate-950/80 p-1 rounded-xl border border-slate-800 w-full sm:w-auto">
+        <button onclick="switchTab('universe')" id="tab-universe" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-indigo-600 text-white shadow">
+          1. Universo
+        </button>
+        <button onclick="switchTab('lobby')" id="tab-lobby" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white">
+          2. Sala (4P)
+        </button>
+        <button onclick="switchTab('arena')" id="tab-arena" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white">
+          3. Arena
+        </button>
+        <button onclick="switchTab('tabletop')" id="tab-tabletop" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white">
+          4. Mesa
+        </button>
+        <button onclick="switchTab('architecture')" id="tab-architecture" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white">
+          5. Matemática
+        </button>
+        <button onclick="toggleSettingsModal()" title="Ajustes de Visual e Áudio" class="hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition active:scale-95">
+          <span>⚙️</span> Ajustes
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- MODAL / MENU DE AJUSTES (TEMAS VISUAIS, ÁUDIO E LATÊNCIA) -->
+  <div id="settings-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onclick="if(event.target === this) toggleSettingsModal()">
+    <div class="app-surface bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-md p-5 shadow-2xl relative animate-card-in max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">⚙️</span>
+          <div>
+            <h2 class="font-display font-bold text-lg text-white leading-tight">Ajustes do Aplicativo</h2>
+            <p class="text-[11px] text-slate-400">Personalize visual, formato das cartas e rede</p>
+          </div>
+        </div>
+        <button onclick="toggleSettingsModal()" class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center font-bold transition">
+          ✕
+        </button>
+      </div>
+
+      <!-- Escolha de Tema Visual -->
+      <div class="mb-4">
+        <label class="block text-[11px] font-bold uppercase tracking-wider text-indigo-400 mb-2">🎨 Tema Visual da Mesa & Cartas</label>
+        <div class="grid grid-cols-1 gap-1.5">
+          <button onclick="setVisualTheme('default')" id="theme-btn-default" class="theme-pill flex items-center justify-between px-3.5 py-2 rounded-2xl text-xs font-semibold bg-indigo-600 text-white shadow transition">
+            <span class="flex items-center gap-2.5"><span class="text-base">🌌</span> Indigo Dark (Padrão)</span>
+            <span class="text-[10px] opacity-80">Moderno</span>
+          </button>
+          <button onclick="setVisualTheme('classic')" id="theme-btn-classic" class="theme-pill flex items-center justify-between px-3.5 py-2 rounded-2xl text-xs font-semibold bg-slate-950/80 border border-slate-800 text-slate-300 hover:text-white transition">
+            <span class="flex items-center gap-2.5"><span class="text-base">🎪</span> Real Roxo & Ouro</span>
+            <span class="text-[10px] opacity-75">Vibrante</span>
+          </button>
+          <button onclick="setVisualTheme('neon')" id="theme-btn-neon" class="theme-pill flex items-center justify-between px-3.5 py-2 rounded-2xl text-xs font-semibold bg-slate-950/80 border border-slate-800 text-slate-300 hover:text-white transition">
+            <span class="flex items-center gap-2.5"><span class="text-base">⚡</span> Cyber Neon Arcade</span>
+            <span class="text-[10px] opacity-75">Alto Contraste</span>
+          </button>
+          <button onclick="setVisualTheme('wood')" id="theme-btn-wood" class="theme-pill flex items-center justify-between px-3.5 py-2 rounded-2xl text-xs font-semibold bg-slate-950/80 border border-slate-800 text-slate-300 hover:text-white transition">
+            <span class="flex items-center gap-2.5"><span class="text-base">🪵</span> Tabuleiro Madeira & Creme</span>
+            <span class="text-[10px] opacity-75">Aconchegante</span>
+          </button>
+          <button onclick="setVisualTheme('clean')" id="theme-btn-clean" class="theme-pill flex items-center justify-between px-3.5 py-2 rounded-2xl text-xs font-semibold bg-slate-950/80 border border-slate-800 text-slate-300 hover:text-white transition">
+            <span class="flex items-center gap-2.5"><span class="text-base">☀️</span> Clean Claro (Minimalista)</span>
+            <span class="text-[10px] opacity-75">Diurno</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Formato & Densidade das Cartas (Originalidade Digital) -->
+      <div class="mb-4">
+        <label class="block text-[11px] font-bold uppercase tracking-wider text-emerald-400 mb-2">🃏 Geometria & Densidade do Baralho</label>
+        <div class="grid grid-cols-2 gap-2 mb-2">
+          <button onclick="setCardShape('circle')" id="shape-btn-circle" class="py-2 px-3 rounded-xl text-xs font-bold bg-emerald-600 text-white shadow transition">
+            ⚪ Carta Redonda
+          </button>
+          <button onclick="setCardShape('rounded')" id="shape-btn-rounded" class="py-2 px-3 rounded-xl text-xs font-bold bg-slate-950/80 border border-slate-800 text-slate-300 hover:text-white transition">
+            ⬜ Carta Quadrada
+          </button>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="setDeckOrder(7)" id="order-btn-7" class="py-2 px-3 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow transition">
+            8 Símbolos (55 cartas)
+          </button>
+          <button onclick="setDeckOrder(5)" id="order-btn-5" class="py-2 px-3 rounded-xl text-xs font-bold bg-slate-950/80 border border-slate-800 text-slate-300 hover:text-white transition">
+            6 Símbolos (31 cartas)
+          </button>
+        </div>
+      </div>
+
+      <!-- Preferências de Áudio e Rede -->
+      <div class="space-y-2 mb-4">
+        <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-3 flex items-center justify-between">
+          <div>
+            <div class="text-xs font-bold text-slate-200">Efeitos Sonoros Sintetizados</div>
+            <div class="text-[11px] text-slate-400">Feedback de acerto, erro e contagem</div>
+          </div>
+          <button onclick="toggleMute()" id="settings-mute-btn" class="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition">
+            🔊 Ativado
+          </button>
+        </div>
+
+        <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-3 flex items-center justify-between text-xs">
+          <div>
+            <div class="font-bold text-slate-200">Compensação de Ping (Host Delay)</div>
+            <div class="text-[11px] text-slate-400">Atrasa carta do Host em 65ms no modo P2P</div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="latency-comp-toggle" checked class="sr-only peer" onchange="showToast(this.checked ? 'Compensação de ping ativada (65ms)' : 'Modo sem delay artificial')">
+            <div class="w-10 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+          </label>
+        </div>
+      </div>
+
+      <button onclick="toggleSettingsModal()" class="w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-display font-bold text-sm transition mb-3">
+        Concluir Ajustes
+      </button>
+
+      <!-- Disclaimer Legal Independente -->
+      <p class="text-[10px] text-slate-500 text-center leading-relaxed">
+        <strong>Olho Vivo</strong> é um projeto independente de entretenimento baseado em geometria projetiva finita (Plano de Fano). Sem vínculo com marcas comerciais de jogos de tabuleiro.
+      </p>
+    </div>
+  </div>
+
+  <!-- TOAST / FEEDBACK DE EVENTOS -->
+  <div id="toast-container" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none transition-all duration-300 opacity-0 translate-y-4">
+    <div id="toast-box" class="px-4 py-2.5 rounded-2xl bg-slate-800/95 border border-indigo-500/40 text-white text-xs font-semibold shadow-2xl flex items-center gap-2 backdrop-blur-md">
+      <span id="toast-icon">✨</span>
+      <span id="toast-msg">Mensagem do sistema</span>
+    </div>
+  </div>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <main class="w-full max-w-6xl mx-auto px-3 py-5 flex-1 flex flex-col items-center">
+
+    <!-- ===================================================================== -->
+    <!-- TELA INICIAL (ETAPA 1): ESCOLHA DO UNIVERSO / PERSONAGENS             -->
+    <!-- ===================================================================== -->
+    <section id="view-universe" class="view-section w-full max-w-md mx-auto">
+      <div class="app-surface bg-slate-900/90 border border-slate-800 rounded-[2rem] p-5 shadow-2xl relative overflow-hidden transition-colors duration-300">
+        <div class="absolute -top-24 -right-24 w-48 h-48 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-fuchsia-600/20 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="text-center mb-5">
+          <div class="w-16 h-16 mx-auto mb-2.5 rounded-2xl shadow-xl shadow-fuchsia-500/25 overflow-hidden border border-fuchsia-400/40">
+            <svg viewBox="0 0 100 100" class="w-full h-full block" aria-hidden="true">
+              <defs>
+                <linearGradient id="ov-hero-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#3b0764"/>
+                  <stop offset="55%" stop-color="#1e1b4b"/>
+                  <stop offset="100%" stop-color="#090d16"/>
+                </linearGradient>
+                <linearGradient id="ov-hero-rim" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#ec4899"/>
+                  <stop offset="100%" stop-color="#6366f1"/>
+                </linearGradient>
+                <linearGradient id="ov-hero-bolt" x1="0%" y1="100%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#ec4899"/>
+                  <stop offset="50%" stop-color="#f97316"/>
+                  <stop offset="100%" stop-color="#facc15"/>
+                </linearGradient>
+                <linearGradient id="ov-hero-star" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#22d3ee"/>
+                  <stop offset="50%" stop-color="#a855f7"/>
+                  <stop offset="100%" stop-color="#facc15"/>
+                </linearGradient>
+              </defs>
+              <rect width="100" height="100" rx="22" fill="url(#ov-hero-bg)"/>
+              <path d="M12 50 C28 24, 72 24, 88 50 C72 76, 28 76, 12 50 Z" fill="#f8fafc" stroke="url(#ov-hero-rim)" stroke-width="4"/>
+              <circle cx="50" cy="50" r="18" fill="#17153b"/>
+              <polygon points="50,36 53.5,46.5 64,50 53.5,53.5 50,64 46.5,53.5 36,50 46.5,46.5" fill="url(#ov-hero-star)"/>
+              <circle cx="57" cy="43" r="2.2" fill="#ffffff"/>
+              <polygon points="85,11 43,47 54,51 15,89 57,53 46,49" fill="url(#ov-hero-bolt)" stroke="#17153b" stroke-width="2.2" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <span class="text-[11px] font-bold uppercase tracking-widest text-indigo-400">Passo 1 de 2 • Preparação</span>
+          <h2 class="font-display text-2xl font-bold text-white mt-0.5">Escolha o Baralho da Partida</h2>
+          <p class="text-xs text-slate-400 mt-1">Cada universo possui 57 personagens e símbolos únicos.</p>
+        </div>
+
+        <!-- Cards de Seleção de Universo com Prévia Visual -->
+        <div class="space-y-2.5 mb-5">
+          <button onclick="selectDeckTheme('classic')" id="deck-btn-classic" class="w-full p-3.5 rounded-2xl text-left border-2 border-indigo-500 bg-indigo-600/20 text-white shadow-lg transition flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-2xl bg-slate-950/70 flex items-center justify-center text-2xl shadow-inner">🎲</div>
+              <div>
+                <div class="font-display font-bold text-sm leading-tight">Clássico Variado</div>
+                <div class="text-[11px] text-indigo-200 mt-0.5">Animais, comidas, objetos e símbolos</div>
+              </div>
+            </div>
+            <div class="text-base tracking-tighter bg-slate-950/60 px-2 py-1 rounded-xl">🔥🦖💎</div>
+          </button>
+
+          <button onclick="selectDeckTheme('scifi')" id="deck-btn-scifi" class="w-full p-3.5 rounded-2xl text-left border-2 border-slate-800 bg-slate-950/60 text-slate-300 hover:border-slate-700 hover:text-white transition flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-2xl bg-slate-950/70 flex items-center justify-center text-2xl shadow-inner">🚀</div>
+              <div>
+                <div class="font-display font-bold text-sm leading-tight">Galáxia Sci-Fi</div>
+                <div class="text-[11px] opacity-75 mt-0.5">Aventura Espacial • Sabres, naves e droides</div>
+              </div>
+            </div>
+            <div class="text-base tracking-tighter bg-slate-950/60 px-2 py-1 rounded-xl">🛸🤖🪐</div>
+          </button>
+
+          <button onclick="selectDeckTheme('magic')" id="deck-btn-magic" class="w-full p-3.5 rounded-2xl text-left border-2 border-slate-800 bg-slate-950/60 text-slate-300 hover:border-slate-700 hover:text-white transition flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-2xl bg-slate-950/70 flex items-center justify-center text-2xl shadow-inner">🏰</div>
+              <div>
+                <div class="font-display font-bold text-sm leading-tight">Contos & Magia</div>
+                <div class="text-[11px] opacity-75 mt-0.5">Reino Encantado • Castelos, coroas e dragões</div>
+              </div>
+            </div>
+            <div class="text-base tracking-tighter bg-slate-950/60 px-2 py-1 rounded-xl">👑🐉🪔</div>
+          </button>
+
+          <button onclick="selectDeckTheme('heroes')" id="deck-btn-heroes" class="w-full p-3.5 rounded-2xl text-left border-2 border-slate-800 bg-slate-950/60 text-slate-300 hover:border-slate-700 hover:text-white transition flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-2xl bg-slate-950/70 flex items-center justify-center text-2xl shadow-inner">🦸</div>
+              <div>
+                <div class="font-display font-bold text-sm leading-tight">Super Heróis</div>
+                <div class="text-[11px] opacity-75 mt-0.5">Ação & Quadrinhos • Escudos, raios e máscaras</div>
+              </div>
+            </div>
+            <div class="text-base tracking-tighter bg-slate-950/60 px-2 py-1 rounded-xl">🕷️⚡🦇</div>
+          </button>
+        </div>
+
+        <button onclick="confirmUniverseAndGoToLobby()" class="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-indigo-500 to-fuchsia-500 hover:from-indigo-400 hover:to-fuchsia-400 text-white font-display font-bold text-base shadow-lg shadow-indigo-500/25 transition transform active:scale-[0.98] flex items-center justify-center gap-2">
+          <span>CONTINUAR PARA A SALA</span>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- ABA 2: LOBBY & SALA MULTIPLAYER (ATÉ 4 JOGADORES)                     -->
+    <!-- ===================================================================== -->
+    <section id="view-lobby" class="view-section hidden w-full max-w-md mx-auto">
+      <!-- Moldura Estilo Smartphone -->
+      <div class="app-surface bg-slate-900/90 border border-slate-800 rounded-[2rem] p-5 shadow-2xl relative overflow-hidden transition-colors duration-300">
+        <!-- Brilho decorativo -->
+        <div class="absolute -top-24 -right-24 w-48 h-48 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-fuchsia-600/20 rounded-full blur-3xl pointer-events-none"></div>
+
+        <!-- Cabeçalho da Sala -->
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] font-semibold uppercase tracking-wider text-indigo-400">Passo 2 de 2 • Sala</span>
+              <button onclick="switchTab('universe')" class="text-[10px] font-bold text-amber-400 hover:underline flex items-center gap-0.5">
+                (<span id="lobby-selected-deck-name">🎲 Clássico</span> • trocar)
+              </button>
+            </div>
+            <h2 class="font-display text-2xl font-bold text-white flex items-center gap-2">
+              Código: <span id="room-code-display" class="text-amber-400 tracking-widest bg-slate-950 px-2.5 py-0.5 rounded-xl border border-slate-800">K9X4</span>
+            </h2>
+          </div>
+          <button onclick="regenerateRoomCode()" title="Gerar novo código" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition active:scale-95">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          </button>
+        </div>
+
+        <!-- Ações de Convite (Link + QR Code Simulado) -->
+        <div class="grid grid-cols-2 gap-2.5 mb-4">
+          <button onclick="copyInviteLink()" class="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-200 text-xs font-semibold transition active:scale-95">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            Copiar Link PWA
+          </button>
+          <button onclick="toggleQrModal()" class="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-200 text-xs font-semibold transition active:scale-95">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+            Mostrar QR Code
+          </button>
+        </div>
+
+        <!-- Seletor de Modo de Jogo -->
+        <div class="mb-4">
+          <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Arquitetura da Partida</label>
+          <div class="grid grid-cols-2 gap-2 bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
+            <button onclick="selectGameMode('online')" id="mode-btn-online" class="py-2 px-2.5 rounded-xl text-left transition bg-indigo-600 text-white shadow">
+              <div class="text-xs font-bold flex items-center gap-1.5">🌐 Online P2P</div>
+              <div class="text-[10px] text-indigo-200 leading-tight mt-0.5">Cada um no seu celular</div>
+            </button>
+            <button onclick="selectGameMode('local')" id="mode-btn-local" class="py-2 px-2.5 rounded-xl text-left transition text-slate-400 hover:text-white">
+              <div class="text-xs font-bold flex items-center gap-1.5">📱 Modo Mesa</div>
+              <div class="text-[10px] text-slate-500 leading-tight mt-0.5">4P no mesmo aparelho</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Lista de 4 Slots de Jogadores -->
+        <div class="mb-4">
+          <div class="flex items-center justify-between mb-2">
+            <span id="lobby-player-count-label" class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Jogadores na Sala (4/4)</span>
+            <div class="flex items-center gap-1">
+              <button onclick="setBotPreset(1)" class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white transition">+1 Bot</button>
+              <button onclick="setBotPreset(2)" class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white transition">+2 Bots</button>
+              <button onclick="setBotPreset(3)" class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white transition">+3 Bots</button>
+            </div>
+          </div>
+
+          <div id="lobby-players-list" class="space-y-2">
+            <!-- Renderizado via JS -->
+          </div>
+        </div>
+
+        <!-- Seletor de Dificuldade dos Bots IA -->
+        <div id="bot-difficulty-panel" class="bg-slate-950/80 border border-slate-800/90 rounded-2xl p-3 mb-4">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-[11px] font-semibold uppercase tracking-wider text-amber-400 flex items-center gap-1">
+              🤖 Dificuldade dos Bots (IA)
+            </span>
+            <span id="bot-reaction-hint" class="text-[10px] text-slate-400 font-medium">Reação: 2.3s – 3.6s</span>
+          </div>
+          <div class="grid grid-cols-3 gap-1.5">
+            <button onclick="setBotDifficulty('easy')" id="diff-btn-easy" class="py-2 px-2 rounded-xl text-center border border-slate-800 bg-slate-900 text-slate-400 hover:text-white transition">
+              <div class="text-xs font-bold">🌱 Fácil</div>
+              <div class="text-[9px] opacity-80">3.8s – 5.5s</div>
+            </button>
+            <button onclick="setBotDifficulty('medium')" id="diff-btn-medium" class="py-2 px-2 rounded-xl text-center border border-indigo-500/60 bg-indigo-600/25 text-white shadow transition">
+              <div class="text-xs font-bold">⚡ Médio</div>
+              <div class="text-[9px] text-indigo-200">2.3s – 3.6s</div>
+            </button>
+            <button onclick="setBotDifficulty('hard')" id="diff-btn-hard" class="py-2 px-2 rounded-xl text-center border border-slate-800 bg-slate-900 text-slate-400 hover:text-white transition">
+              <div class="text-xs font-bold">🔥 Difícil</div>
+              <div class="text-[9px] opacity-80">1.4s – 2.2s</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Botão Iniciar Partida -->
+        <button onclick="startMatchFromLobby()" class="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-display font-bold text-base shadow-lg shadow-emerald-500/25 transition transform active:scale-[0.98] flex items-center justify-center gap-2">
+          <span>INICIAR PARTIDA AGORA</span>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+        </button>
+
+        <!-- Modal Simulado de QR Code -->
+        <div id="qr-modal" class="hidden absolute inset-0 bg-slate-950/95 backdrop-blur-md z-20 flex flex-col items-center justify-center p-6 text-center">
+          <div class="bg-white p-4 rounded-3xl shadow-2xl mb-4">
+            <!-- SVG QR Code estilizado -->
+            <svg class="w-40 h-40 text-slate-900" viewBox="0 0 100 100" fill="currentColor">
+              <path d="M10 10h25v25H10V10zm5 5v15h15V15H15zm5 5h5v5h-5v-5zm45-10h25v25H65V10zm5 5v15h15V15H70zm5 5h5v5h-5v-5zM10 65h25v25H10V65zm5 5v15h15V70H15zm5 5h5v5h-5v-5zm25-65h5v10h-5V10zm10 5h5v15h-5V15zm-10 15h10v5H45V30zm-5 10h15v5H40V40zm20 0h10v10H60V40zm15 5h15v5H75V45zM10 45h15v5H10v-5zm20 5h5v10h-5V50zm15 5h10v10H45V55zm20 10h10v5H65V65zm15 0h10v15H80V65zM45 75h15v5H45v-5zm20 10h10v5H65V85zm-20 0h5v5h-5v-5z"/>
+            </svg>
+          </div>
+          <h3 class="font-display text-lg font-bold text-white mb-1">Escaneie para entrar na sala</h3>
+          <p class="text-xs text-slate-400 mb-5">Aponte a câmera do celular dos amigos para conectar direto via WebRTC na sala <strong id="qr-room-code" class="text-amber-400">K9X4</strong>.</p>
+          <button onclick="toggleQrModal()" class="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold">
+            Fechar QR Code
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- ABA 3: ARENA MOBILE ONLINE (VISÃO DO CELULAR DO JOGADOR EM PARTIDA)   -->
+    <!-- ===================================================================== -->
+    <section id="view-arena" class="view-section hidden w-full max-w-md mx-auto">
+      <div class="app-surface bg-slate-900/95 border border-slate-800 rounded-[2.2rem] p-4 shadow-2xl flex flex-col justify-between min-h-[630px] relative overflow-hidden transition-colors duration-300">
+        <!-- HUD SUPERIOR: Pilha Central + Streak + Dificuldade -->
+        <div>
+          <div class="flex items-center justify-between gap-2 mb-2.5">
+            <!-- Contador de Cartas na Pilha Central -->
+            <div class="flex items-center gap-1.5 bg-slate-950/90 border border-slate-800 px-2.5 py-1.5 rounded-xl">
+              <span class="text-sm">📚</span>
+              <div>
+                <div class="text-[9px] uppercase font-bold text-slate-400 leading-none">Mesa</div>
+                <div id="arena-deck-count" class="text-xs font-extrabold text-white leading-tight">1 carta</div>
+              </div>
+            </div>
+
+            <!-- Indicador de Sequência (Combo) + Dica Rápida -->
+            <div class="flex items-center gap-1.5">
+              <div id="streak-badge" class="hidden px-2 py-1.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[11px] font-extrabold items-center gap-1">
+                🔥 <span id="streak-count">2</span>x
+              </div>
+              <button onclick="highlightHint()" class="px-2.5 py-1.5 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-300 text-[11px] font-semibold flex items-center gap-1 transition active:scale-95" title="Destacar o símbolo em comum">
+                <span>🔍</span> Dica
+              </button>
+            </div>
+
+            <!-- Badge de Modo / Dificuldade -->
+            <div class="flex items-center gap-1.5 bg-slate-950/90 border border-slate-800 px-2.5 py-1.5 rounded-xl">
+              <span id="arena-status-dot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+              <div class="text-right">
+                <div class="text-[9px] uppercase font-bold text-slate-400 leading-none">Modo IA</div>
+                <div id="arena-ping-badge" class="text-xs font-extrabold text-amber-300 leading-tight">Médio</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Placar de Pilhas Restantes (Modo Clássico: Esvazie sua pilha primeiro!) -->
+          <div id="arena-scoreboard" class="grid grid-cols-4 gap-1.5 mb-2">
+            <!-- Preenchido via JS -->
+          </div>
+        </div>
+
+        <!-- ÁREA CENTRAL: CARTA DA MESA (ALVO COMPARTILHADO) -->
+        <div class="flex flex-col items-center justify-center my-1 relative">
+          <div class="flex items-center gap-2 mb-1.5">
+            <span id="center-card-owner-badge" class="text-[10px] font-extrabold uppercase tracking-widest text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2.5 py-0.5 rounded-full transition-all">
+              Carta Central (Alvo)
+            </span>
+          </div>
+
+          <!-- Carta Circular Superior -->
+          <div id="center-card" class="game-card w-[215px] h-[215px] sm:w-[235px] sm:h-[235px]">
+            <div class="game-card-ring"></div>
+            <div id="center-card-symbols" class="w-full h-full relative"></div>
+          </div>
+        </div>
+
+        <!-- DIVISOR VISUAL COM FEEDBACK DE RODADA -->
+        <div class="flex items-center justify-center my-1.5 h-6">
+          <div id="round-status-banner" class="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5 transition-all text-center px-2">
+            <span>🎯 Esvazie sua pilha antes dos Bots!</span>
+          </div>
+        </div>
+
+        <!-- ÁREA INFERIOR: SUA CARTA (JOGADOR LOCAL) -->
+        <div class="flex flex-col items-center justify-center relative pb-1">
+          <!-- Carta Circular Inferior -->
+          <div id="player-card-wrapper" class="relative">
+            <div id="player-card" class="game-card w-[225px] h-[225px] sm:w-[245px] sm:h-[245px]">
+              <div class="game-card-ring"></div>
+              <div id="player-card-symbols" class="w-full h-full relative"></div>
+            </div>
+
+            <!-- OVERLAY DE BLOQUEIO PUNITIVO (1.5s) -->
+            <div id="penalty-overlay" class="hidden absolute inset-0 rounded-[inherit] bg-rose-600/90 backdrop-blur-[2px] border-4 border-rose-300 flex flex-col items-center justify-center text-center p-4 z-20 shadow-2xl">
+              <span class="text-3xl mb-1">🚫</span>
+              <div class="font-display font-bold text-white text-base leading-tight">Símbolo Errado!</div>
+              <div id="penalty-timer" class="text-xs font-extrabold text-rose-100 mt-1 bg-rose-950/50 px-2.5 py-0.5 rounded-full">
+                Bloqueado 1.5s
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-2 flex items-center justify-between w-full px-2">
+            <span id="player-hand-footer" class="text-[10px] font-extrabold uppercase tracking-widest text-indigo-400">
+              Sua Carta (<span id="player-remaining-label">13</span> restantes)
+            </span>
+            <button onclick="initArenaGame()" class="text-[10px] font-semibold text-slate-400 hover:text-emerald-300 underline decoration-dotted">
+              Reiniciar partida
+            </button>
+          </div>
+        </div>
+
+        <!-- OVERLAY DE CONTAGEM REGRESSIVA (3-2-1) PARA FOCO VISUAL -->
+        <div id="countdown-overlay" class="hidden absolute inset-0 bg-slate-950/85 backdrop-blur-sm z-25 flex flex-col items-center justify-center text-center p-6">
+          <span class="text-xs font-bold uppercase tracking-widest text-indigo-400 mb-2">Prepare os olhos!</span>
+          <div id="countdown-number" class="font-display font-black text-7xl text-white drop-shadow-[0_0_25px_rgba(99,102,241,0.8)] animate-bounce">
+            3
+          </div>
+          <p class="text-xs text-slate-400 mt-3 max-w-[220px]">Encontre o único símbolo igual entre a carta de cima e a sua.</p>
+        </div>
+
+        <!-- MODAL DE FIM DE JOGO (PÓDIO COMPLETO) -->
+        <div id="podium-modal" class="hidden absolute inset-0 bg-slate-950/95 backdrop-blur-md z-30 flex flex-col items-center justify-between p-5 text-center">
+          <div class="w-full pt-2">
+            <div id="podium-trophy" class="text-5xl mb-2 animate-bounce">🏆</div>
+            <h3 id="podium-title" class="font-display text-2xl font-bold text-white">Vitória!</h3>
+            <p id="podium-subtitle" class="text-xs text-slate-400 mt-0.5">Você esvaziou sua pilha primeiro!</p>
+          </div>
+
+          <!-- Lista de Classificação 1º a 4º -->
+          <div id="podium-rankings" class="w-full space-y-2 my-3">
+            <!-- Preenchido via JS -->
+          </div>
+
+          <!-- Estatísticas da Partida -->
+          <div class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-3 flex items-center justify-around text-xs mb-3">
+            <div>
+              <div class="text-[10px] text-slate-400 uppercase font-bold">Seu Tempo Médio</div>
+              <div id="podium-avg-reaction" class="font-display font-bold text-base text-emerald-400">1.85s</div>
+            </div>
+            <div class="h-7 w-px bg-slate-800"></div>
+            <div>
+              <div class="text-[10px] text-slate-400 uppercase font-bold">Dificuldade IA</div>
+              <div id="podium-diff-label" class="font-display font-bold text-base text-amber-400">Médio</div>
+            </div>
+          </div>
+
+          <div class="w-full grid grid-cols-2 gap-2.5">
+            <button onclick="closePodiumAndLobby()" class="py-3 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs transition">
+              Voltar ao Lobby
+            </button>
+            <button onclick="playAgainFromPodium()" class="py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-display font-bold text-sm shadow-lg shadow-emerald-500/25 transition">
+              Jogar Novamente
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- ABA 3: MODO MESA (4 JOGADORES NO MESMO APARELHO - ZERO LATÊNCIA)      -->
+    <!-- ===================================================================== -->
+    <section id="view-tabletop" class="view-section hidden w-full max-w-lg mx-auto">
+      <div class="app-surface mb-3 flex items-center justify-between bg-slate-900/90 border border-slate-800 px-4 py-2.5 rounded-2xl transition-colors duration-300">
+        <div>
+          <h2 class="font-display font-bold text-sm text-white">Modo Mesa (Pass-and-Play Simultâneo)</h2>
+          <p class="text-[11px] text-slate-400">Coloque o celular/tablet no centro da mesa. Cada borda é um jogador.</p>
+        </div>
+        <button onclick="resetTabletopGame()" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition">
+          Reiniciar
+        </button>
+      </div>
+
+      <!-- Tabuleiro Quadrado para Mesa -->
+      <div class="app-surface bg-slate-900 border-2 border-slate-800 rounded-[2.2rem] p-3 shadow-2xl aspect-square max-w-[460px] mx-auto grid grid-cols-3 grid-rows-3 gap-2 items-center justify-items-center relative transition-colors duration-300">
+
+        <!-- JOGADOR 3 (TOPO - Rotacionado 180°) -->
+        <div class="col-start-2 row-start-1 flex flex-col items-center rotate-180">
+          <div class="text-[10px] font-bold text-amber-400 mb-1">P3 • <span id="tt-score-2">0</span> pts</div>
+          <div id="tt-card-2" class="game-card w-[108px] h-[108px] sm:w-[122px] sm:h-[122px]"></div>
+        </div>
+
+        <!-- JOGADOR 4 (ESQUERDA - Rotacionado 90°) -->
+        <div class="col-start-1 row-start-2 flex flex-col items-center rotate-90">
+          <div class="text-[10px] font-bold text-fuchsia-400 mb-1">P4 • <span id="tt-score-3">0</span> pts</div>
+          <div id="tt-card-3" class="game-card w-[108px] h-[108px] sm:w-[122px] sm:h-[122px]"></div>
+        </div>
+
+        <!-- CARTA CENTRAL DA MESA -->
+        <div class="col-start-2 row-start-2 flex flex-col items-center justify-center relative">
+          <div id="tt-center-card" class="game-card w-[124px] h-[124px] sm:w-[142px] sm:h-[142px] ring-4 ring-indigo-500/40"></div>
+          <span id="tt-deck-badge" class="absolute -bottom-5 text-[10px] font-bold bg-slate-950 text-slate-300 px-2 py-0.5 rounded-full border border-slate-700">
+            53 cartas
+          </span>
+        </div>
+
+        <!-- JOGADOR 2 (DIREITA - Rotacionado -90°) -->
+        <div class="col-start-3 row-start-2 flex flex-col items-center -rotate-90">
+          <div class="text-[10px] font-bold text-emerald-400 mb-1">P2 • <span id="tt-score-1">0</span> pts</div>
+          <div id="tt-card-1" class="game-card w-[108px] h-[108px] sm:w-[122px] sm:h-[122px]"></div>
+        </div>
+
+        <!-- JOGADOR 1 (BASE - 0°) -->
+        <div class="col-start-2 row-start-3 flex flex-col items-center">
+          <div id="tt-card-0" class="game-card w-[108px] h-[108px] sm:w-[122px] sm:h-[122px]"></div>
+          <div class="text-[10px] font-bold text-sky-400 mt-1">P1 (Você) • <span id="tt-score-0">0</span> pts</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- ABA 4: MATEMÁTICA DO PLANO DE FANO & ARQUITETURA P2P                  -->
+    <!-- ===================================================================== -->
+    <section id="view-architecture" class="view-section hidden w-full max-w-4xl mx-auto space-y-5">
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Card 1: Validador Matemático Real -->
+        <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-xl">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xl">📐</span>
+            <h2 class="font-display font-bold text-lg text-white">Geometria Projetiva (Plano de Fano n=7)</h2>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed mb-4">
+            O baralho gerado neste protótipo não é aleatório. Ele usa a fórmula <strong>N = n² + n + 1</strong> (com n=7), criando <strong>57 cartas</strong> e <strong>57 símbolos</strong>, com <strong>8 símbolos por carta</strong>. Qualquer par escolhido terá <strong>exatamente 1 símbolo em comum</strong>.
+          </p>
+
+          <!-- Testador Interativo de Pares -->
+          <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5">
+            <div class="text-[11px] font-bold uppercase tracking-wider text-indigo-400 mb-2.5">Inspetor de Cartas em Tempo Real</div>
+            <div class="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <label class="text-[11px] text-slate-400 block mb-1">Carta A (0 a 56)</label>
+                <input type="number" id="inspect-card-a" min="0" max="56" value="0" onchange="runMathInspector()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-sm font-bold text-white">
+              </div>
+              <div>
+                <label class="text-[11px] text-slate-400 block mb-1">Carta B (0 a 56)</label>
+                <input type="number" id="inspect-card-b" min="0" max="56" value="14" onchange="runMathInspector()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-sm font-bold text-white">
+              </div>
+            </div>
+            <div id="math-inspector-result" class="text-xs bg-slate-900 border border-slate-800 rounded-xl p-3">
+              <!-- Preenchido via JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Arquitetura P2P no GitHub Pages -->
+        <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-xl flex flex-col justify-between">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-xl">🛰️</span>
+              <h2 class="font-display font-bold text-lg text-white">Arquitetura P2P & Anti-Latência</h2>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed mb-3">
+              Como o <strong>GitHub Pages</strong> hospeda apenas arquivos estáticos (sem servidor Node.js), o multiplayer funciona via <strong>WebRTC (PeerJS)</strong> com autoridade no Host e mitigação de injustiça:
+            </p>
+            <ul class="space-y-2 text-xs text-slate-300">
+              <li class="flex items-start gap-2 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80">
+                <span class="text-emerald-400 font-bold">1.</span>
+                <span><strong>Host Delay Adaptativo:</strong> O Host calcula o ping médio dos 3 convidados e atrasa a exibição da própria carta em ~60ms para igualar o tempo de reação humano.</span>
+              </li>
+              <li class="flex items-start gap-2 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80">
+                <span class="text-emerald-400 font-bold">2.</span>
+                <span><strong>Janela de Resolução (100ms):</strong> Ao receber um toque válido, o Host aguarda 100ms por pacotes simultâneos e compara o <code class="text-indigo-300">timestamp</code> sincronizado.</span>
+              </li>
+              <li class="flex items-start gap-2 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80">
+                <span class="text-emerald-400 font-bold">3.</span>
+                <span><strong>Trava Anti-Spam (1.5s):</strong> Tocar em símbolo errado bloqueia a carta localmente, impedindo cliques aleatórios frenéticos.</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+            <span>Stack: HTML5 + Tailwind + PeerJS + Service Worker</span>
+            <span class="text-emerald-400 font-bold">100% Gratuito</span>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script>
+    // =========================================================================
+    // 2. GERADOR DO PLANO PROJETIVO FINITO (PLANO DE FANO ORDEM n = 7 OU n = 5)
+    // =========================================================================
+    function generateSpotItDeck(n = 7) {
+      const cards = [];
+
+      // Primeira carta: [0, 1, 2, ..., n]
+      const firstCard = [];
+      for (let i = 0; i <= n; i++) firstCard.push(i);
+      cards.push(firstCard);
+
+      // Próximas n cartas passando pelo símbolo 0
+      for (let i = 0; i < n; i++) {
+        const card = [0];
+        for (let j = 0; j < n; j++) {
+          card.push(n + 1 + n * i + j);
+        }
+        cards.push(card);
+      }
+
+      // Restantes n^2 cartas
+      for (let i = 0; i < n; i++) {
+        for (let j = 0; j < n; j++) {
+          const card = [i + 1];
+          for (let k = 0; k < n; k++) {
+            const symbolIndex = n + 1 + n * k + ((i * k + j) % n);
+            card.push(symbolIndex);
+          }
+          cards.push(card);
+        }
+      }
+
+      return cards; // n=7 -> 57 cartas (8 símbolos) | n=5 -> 31 cartas (6 símbolos)
+    }
+
+    let currentDeckOrder = 7;
+    let FULL_DECK = generateSpotItDeck(7);
+
+    // SVGs vetoriais nítidos e autorais para os baralhos temáticos
+    const CUSTOM_SVGS = {
+      saberBlue: `<svg viewBox="0 0 36 36" class="w-[1em] h-[1em] inline-block"><rect x="15" y="22" width="6" height="12" rx="1.5" fill="#334155"/><rect x="16.5" y="2" width="3" height="21" rx="1.5" fill="#38bdf8"/></svg>`,
+      saberRed: `<svg viewBox="0 0 36 36" class="w-[1em] h-[1em] inline-block"><rect x="15" y="22" width="6" height="12" rx="1.5" fill="#1e293b"/><rect x="16.5" y="2" width="3" height="21" rx="1.5" fill="#f43f5e"/></svg>`,
+      deathOrb: `<svg viewBox="0 0 36 36" class="w-[1em] h-[1em] inline-block"><circle cx="18" cy="18" r="15" fill="#64748b"/><circle cx="13" cy="12" r="4" fill="#334155"/><line x1="3" y1="18" x2="33" y2="18" stroke="#1e293b" stroke-width="2"/></svg>`,
+      starFighter: `<svg viewBox="0 0 36 36" class="w-[1em] h-[1em] inline-block"><polygon points="18,4 22,26 14,26" fill="#e2e8f0" stroke="#475569" stroke-width="1.5"/><polygon points="14,18 4,28 14,25" fill="#ef4444"/><polygon points="22,18 32,28 22,25" fill="#ef4444"/></svg>`,
+      magicWand: `<svg viewBox="0 0 36 36" class="w-[1em] h-[1em] inline-block"><line x1="7" y1="29" x2="25" y2="11" stroke="#6366f1" stroke-width="4" stroke-linecap="round"/><polygon points="27,4 29,9 34,9 30,12 31,17 27,14 23,17 24,12 20,9 25,9" fill="#facc15"/></svg>`,
+      glassSlipper: `<svg viewBox="0 0 36 36" class="w-[1em] h-[1em] inline-block"><path d="M6,26 L12,26 L12,18 L24,25 C28,27 32,25 32,22 C32,20 26,19 20,16 L12,10 L8,14 L10,20 L6,20 Z" fill="#38bdf8" stroke="#0284c7" stroke-width="1.5"/></svg>`,
+      heroShield: `<svg viewBox="0 0 36 36" class="w-[1em] h-[1em] inline-block"><circle cx="18" cy="18" r="15" fill="#dc2626"/><circle cx="18" cy="18" r="11" fill="#f8fafc"/><circle cx="18" cy="18" r="7" fill="#2563eb"/><polygon points="18,12 19.8,16.2 24,16.2 20.6,18.8 21.8,23 18,20.5 14.2,23 15.4,18.8 12,16.2 16.2,16.2" fill="#ffffff"/></svg>`,
+      heroHammer: `<svg viewBox="0 0 36 36" class="w-[1em] h-[1em] inline-block"><rect x="16" y="16" width="4" height="17" rx="1" fill="#92400e"/><rect x="8" y="6" width="20" height="11" rx="2" fill="#94a3b8" stroke="#475569" stroke-width="1.5"/></svg>`
+    };
+
+    const DECK_THEMES = {
+      classic: {
+        label: 'Clássico Variado',
+        badge: '🎲 Clássico',
+        symbols: [
+          { id: 0, icon: "🔥", name: "Fogo" }, { id: 1, icon: "❄️", name: "Floco de Neve" }, { id: 2, icon: "⚡", name: "Raio" },
+          { id: 3, icon: "🍀", name: "Trevo" }, { id: 4, icon: "👑", name: "Coroa" }, { id: 5, icon: "🚀", name: "Foguete" },
+          { id: 6, icon: "🐱", name: "Gato" }, { id: 7, icon: "🐶", name: "Cachorro" }, { id: 8, icon: "🦖", name: "Dinossauro" },
+          { id: 9, icon: "🦄", name: "Unicórnio" }, { id: 10, icon: "🐙", name: "Polvo" }, { id: 11, icon: "🐢", name: "Tartaruga" },
+          { id: 12, icon: "🐝", name: "Abelha" }, { id: 13, icon: "🦋", name: "Borboleta" }, { id: 14, icon: "🍎", name: "Maçã" },
+          { id: 15, icon: "🍕", name: "Pizza" }, { id: 16, icon: "🍉", name: "Melancia" }, { id: 17, icon: "🍩", name: "Rosquinha" },
+          { id: 18, icon: "🍦", name: "Sorvete" }, { id: 19, icon: "🥑", name: "Abacate" }, { id: 20, icon: "⚽", name: "Bola" },
+          { id: 21, icon: "🎸", name: "Guitarra" }, { id: 22, icon: "🎮", name: "Controle" }, { id: 23, icon: "🎯", name: "Alvo" },
+          { id: 24, icon: "🎲", name: "Dado" }, { id: 25, icon: "🎨", name: "Paleta" }, { id: 26, icon: "⚓", name: "Âncora" },
+          { id: 27, icon: "🔑", name: "Chave" }, { id: 28, icon: "💎", name: "Diamante" }, { id: 29, icon: "⏰", name: "Relógio" },
+          { id: 30, icon: "💡", name: "Lâmpada" }, { id: 31, icon: "🧲", name: "Ímã" }, { id: 32, icon: "💣", name: "Bomba" },
+          { id: 33, icon: "🎈", name: "Balão" }, { id: 34, icon: "🎁", name: "Presente" }, { id: 35, icon: "🌙", name: "Lua" },
+          { id: 36, icon: "☀️", name: "Sol" }, { id: 37, icon: "⭐", name: "Estrela" }, { id: 38, icon: "❤️", name: "Coração" },
+          { id: 39, icon: "👻", name: "Fantasma" }, { id: 40, icon: "👽", name: "ET" }, { id: 41, icon: "🕶️", name: "Óculos" },
+          { id: 42, icon: "🧢", name: "Boné" }, { id: 43, icon: "🚲", name: "Bicicleta" }, { id: 44, icon: "🚗", name: "Carro" },
+          { id: 45, icon: "✈️", name: "Avião" }, { id: 46, icon: "⛵", name: "Barco" }, { id: 47, icon: "🏰", name: "Castelo" },
+          { id: 48, icon: "🌋", name: "Vulcão" }, { id: 49, icon: "🏆", name: "Troféu" }, { id: 50, icon: "🎵", name: "Nota Musical" },
+          { id: 51, icon: "🤖", name: "Robô" }, { id: 52, icon: "🌵", name: "Cacto" }, { id: 53, icon: "🌴", name: "Palmeira" },
+          { id: 54, icon: "🍄", name: "Cogumelo" }, { id: 55, icon: "🌈", name: "Arco-Íris" }, { id: 56, icon: "🔔", name: "Sino" }
+        ]
+      },
+      scifi: {
+        label: 'Galáxia Sci-Fi',
+        badge: '🚀 Galáxia Sci-Fi',
+        symbols: [
+          { id: 0, svg: CUSTOM_SVGS.saberBlue, name: "Sabre Azul" },
+          { id: 1, svg: CUSTOM_SVGS.saberRed, name: "Sabre Vermelho" },
+          { id: 2, svg: CUSTOM_SVGS.deathOrb, name: "Esfera Orbital" },
+          { id: 3, svg: CUSTOM_SVGS.starFighter, name: "Caça Estelar" },
+          { id: 4, icon: "🚀", name: "Foguete" }, { id: 5, icon: "🛸", name: "Disco Voador" }, { id: 6, icon: "🤖", name: "Droide" },
+          { id: 7, icon: "👽", name: "Alienígena" }, { id: 8, icon: "👾", name: "Invasor" }, { id: 9, icon: "🪐", name: "Planeta Anéis" },
+          { id: 10, icon: "☄️", name: "Cometa" }, { id: 11, icon: "🌌", name: "Galáxia" }, { id: 12, icon: "⭐", name: "Estrela" },
+          { id: 13, icon: "🌑", name: "Lua Negra" }, { id: 14, icon: "🌞", name: "Estrela Binária" }, { id: 15, icon: "🛰️", name: "Satélite" },
+          { id: 16, icon: "🔭", name: "Telescópio" }, { id: 17, icon: "📡", name: "Antena" }, { id: 18, icon: "⚡", name: "Energia" },
+          { id: 19, icon: "🔋", name: "Célula Força" }, { id: 20, icon: "🧬", name: "DNA Clone" }, { id: 21, icon: "🧪", name: "Soro" },
+          { id: 22, icon: "🛡️", name: "Escudo Defletor" }, { id: 23, icon: "⚔️", name: "Duelo" }, { id: 24, icon: "🔫", name: "Blaster" },
+          { id: 25, icon: "🎖️", name: "Medalha Rebelde" }, { id: 26, icon: "👑", name: "Senadora" }, { id: 27, icon: "🧙‍♂️", name: "Mestre Sábio" },
+          { id: 28, icon: "🥷", name: "Caçador" }, { id: 29, icon: "👨‍🚀", name: "Piloto" }, { id: 30, icon: "🦾", name: "Braço Biônico" },
+          { id: 31, icon: "🦿", name: "Perna Mecânica" }, { id: 32, icon: "🧠", name: "Mente" }, { id: 33, icon: "👁️", name: "Visão" },
+          { id: 34, icon: "🔥", name: "Propulsor" }, { id: 35, icon: "❄️", name: "Planeta Gelo" }, { id: 36, icon: "🌋", name: "Planeta Lava" },
+          { id: 37, icon: "🏜️", name: "Deserto" }, { id: 38, icon: "🌲", name: "Lua Floresta" }, { id: 39, icon: "🌊", name: "Planeta Água" },
+          { id: 40, icon: "💎", name: "Cristal Kyber" }, { id: 41, icon: "🔮", name: "Holocron" }, { id: 42, icon: "🧭", name: "Mapa Estelar" },
+          { id: 43, icon: "⚙️", name: "Engrenagem" }, { id: 44, icon: "🔧", name: "Chave Reparo" }, { id: 45, icon: "📟", name: "Comunicador" },
+          { id: 46, icon: "💿", name: "Disco Dados" }, { id: 47, icon: "🚨", name: "Alerta" }, { id: 48, icon: "☢️", name: "Reator" },
+          { id: 49, icon: "☣️", name: "Perigo" }, { id: 50, icon: "🎯", name: "Mira Laser" }, { id: 51, icon: "🏁", name: "Corrida Pods" },
+          { id: 52, icon: "🐻", name: "Guerreiro Peludo" }, { id: 53, icon: "🦎", name: "Criatura" }, { id: 54, icon: "🐍", name: "Serpente" },
+          { id: 55, icon: "💀", name: "Império" }, { id: 56, icon: "🌟", name: "Nova Esperança" }
+        ]
+      },
+      magic: {
+        label: 'Contos & Magia',
+        badge: '🏰 Contos & Magia',
+        symbols: [
+          { id: 0, svg: CUSTOM_SVGS.magicWand, name: "Varinha Mágica" },
+          { id: 1, svg: CUSTOM_SVGS.glassSlipper, name: "Sapatinho Cristal" },
+          { id: 2, icon: "🏰", name: "Castelo" }, { id: 3, icon: "👑", name: "Coroa Real" }, { id: 4, icon: "👸", name: "Princesa" },
+          { id: 5, icon: "🤴", name: "Príncipe" }, { id: 6, icon: "🧚", name: "Fada" }, { id: 7, icon: "🧞", name: "Gênio" },
+          { id: 8, icon: "🧜‍♀️", name: "Sereia" }, { id: 9, icon: "🧙‍♀️", name: "Feiticeira" }, { id: 10, icon: "🐉", name: "Dragão" },
+          { id: 11, icon: "🦄", name: "Unicórnio" }, { id: 12, icon: "🐸", name: "Príncipe Sapo" }, { id: 13, icon: "🐭", name: "Ratinho" },
+          { id: 14, icon: "🦁", name: "Rei Leão" }, { id: 15, icon: "🐻", name: "Ursinho" }, { id: 16, icon: "🐠", name: "Peixinho" },
+          { id: 17, icon: "🦀", name: "Caranguejo" }, { id: 18, icon: "🐦", name: "Pássaro Azul" }, { id: 19, icon: "🦋", name: "Borboleta" },
+          { id: 20, icon: "🍎", name: "Maçã Encantada" }, { id: 21, icon: "🌹", name: "Rosa Mágica" }, { id: 22, icon: "🎃", name: "Carruagem" },
+          { id: 23, icon: "❄️", name: "Floco Gelo" }, { id: 24, icon: "⛄", name: "Boneco Neve" }, { id: 25, icon: "🪔", name: "Lâmpada Mágica" },
+          { id: 26, icon: "🪞", name: "Espelho Mágico" }, { id: 27, icon: "📖", name: "Livro Contos" }, { id: 28, icon: "🗝️", name: "Chave Secreta" },
+          { id: 29, icon: "💎", name: "Joia" }, { id: 30, icon: "💍", name: "Anel Real" }, { id: 31, icon: "🎈", name: "Casa Balões" },
+          { id: 32, icon: "🌈", name: "Arco-Íris" }, { id: 33, icon: "✨", name: "Pó de Pirlimpimpim" }, { id: 34, icon: "🌙", name: "Lua Encantada" },
+          { id: 35, icon: "⭐", name: "Estrela Desejo" }, { id: 36, icon: "☀️", name: "Sol Dourado" }, { id: 37, icon: "🌊", name: "Oceano" },
+          { id: 38, icon: "🐚", name: "Concha" }, { id: 39, icon: "🌺", name: "Flor Tropical" }, { id: 40, icon: "🍄", name: "Cogumelo" },
+          { id: 41, icon: "🧪", name: "Poção" }, { id: 42, icon: "🕰️", name: "Meia-Noite" }, { id: 43, icon: "🕯️", name: "Candelabro" },
+          { id: 44, icon: "🫖", name: "Bule Mágico" }, { id: 45, icon: "🏹", name: "Arco Valente" }, { id: 46, icon: "⚔️", name: "Espada Pedra" },
+          { id: 47, icon: "🛡️", name: "Brasão" }, { id: 48, icon: "🏴‍☠️", name: "Navio Pirata" }, { id: 49, icon: "🪝", name: "Gancho" },
+          { id: 50, icon: "🐊", name: "Crocodilo" }, { id: 51, icon: "🐘", name: "Elefante Voador" }, { id: 52, icon: "🎪", name: "Circo" },
+          { id: 53, icon: "🍯", name: "Pote Mel" }, { id: 54, icon: "🧸", name: "Brinquedo" }, { id: 55, icon: "❤️", name: "Amor Verdadeiro" },
+          { id: 56, icon: "🎶", name: "Melodia" }
+        ]
+      },
+      heroes: {
+        label: 'Super Heróis',
+        badge: '🦸 Super Heróis',
+        symbols: [
+          { id: 0, svg: CUSTOM_SVGS.heroShield, name: "Escudo Estrela" },
+          { id: 1, svg: CUSTOM_SVGS.heroHammer, name: "Martelo Trovão" },
+          { id: 2, icon: "🦸", name: "Super Herói" }, { id: 3, icon: "🦸‍♀️", name: "Super Heroína" }, { id: 4, icon: "🦹", name: "Vilão" },
+          { id: 5, icon: "🕷️", name: "Aranha" }, { id: 6, icon: "🕸️", name: "Teia" }, { id: 7, icon: "🦇", name: "Morcego" },
+          { id: 8, icon: "⚡", name: "Velocidade" }, { id: 9, icon: "🔥", name: "Tocha" }, { id: 10, icon: "❄️", name: "Gelo" },
+          { id: 11, icon: "💪", name: "Super Força" }, { id: 12, icon: "👊", name: "Soco" }, { id: 13, icon: "💥", name: "Impacto" },
+          { id: 14, icon: "💫", name: "Voo" }, { id: 15, icon: "🛡️", name: "Defesa" }, { id: 16, icon: "⚔️", name: "Lâminas" },
+          { id: 17, icon: "🏹", name: "Arqueiro" }, { id: 18, icon: "🔱", name: "Tridente" }, { id: 19, icon: "🦾", name: "Armadura" },
+          { id: 20, icon: "🤖", name: "Androide" }, { id: 21, icon: "🧬", name: "Mutação" }, { id: 22, icon: "🧪", name: "Fórmula" },
+          { id: 23, icon: "☢️", name: "Radiação" }, { id: 24, icon: "💎", name: "Joia Infinita" }, { id: 25, icon: "🧤", name: "Manopla" },
+          { id: 26, icon: "💍", name: "Anel Poder" }, { id: 27, icon: "🔦", name: "Sinal Noturno" }, { id: 28, icon: "🏙️", name: "Metrópole" },
+          { id: 29, icon: "🚨", name: "Sirene" }, { id: 30, icon: "🚓", name: "Patrulha" }, { id: 31, icon: "🚁", name: "Helicóptero" },
+          { id: 32, icon: "🚀", name: "Jato" }, { id: 33, icon: "🛰️", name: "Base Orbital" }, { id: 34, icon: "🌍", name: "Salvar o Mundo" },
+          { id: 35, icon: "🌪️", name: "Tempestade" }, { id: 36, icon: "🌊", name: "Maré" }, { id: 37, icon: "🌋", name: "Terremoto" },
+          { id: 38, icon: "🐆", name: "Pantera" }, { id: 39, icon: "🦅", name: "Falcão" }, { id: 40, icon: "🐺", name: "Lobo" },
+          { id: 41, icon: "🐜", name: "Formiga" }, { id: 42, icon: "🐝", name: "Vespa" }, { id: 43, icon: "🦖", name: "Fera" },
+          { id: 44, icon: "👁️", name: "Visão Raio-X" }, { id: 45, icon: "🧠", name: "Telepatia" }, { id: 46, icon: "🔮", name: "Místico" },
+          { id: 47, icon: "⏳", name: "Viagem Tempo" }, { id: 48, icon: "💣", name: "Bomba" }, { id: 49, icon: "🎯", name: "Certeiro" },
+          { id: 50, icon: "🏆", name: "Liga Campeões" }, { id: 51, icon: "⭐", name: "Estrela" }, { id: 52, icon: "🎭", name: "Identidade" },
+          { id: 53, icon: "📰", name: "Jornal" }, { id: 54, icon: "📷", name: "Fotógrafo" }, { id: 55, icon: "🔑", name: "Cofre" },
+          { id: 56, icon: "❤️", name: "Coragem" }
+        ]
+      }
+    };
+
+    let currentDeckTheme = 'classic';
+
+    function getActiveSymbolsPool() {
+      return DECK_THEMES[currentDeckTheme].symbols;
+    }
+
+    function renderSymbolGraphic(symObj, fontSizeRem, rotationDeg) {
+      if (symObj.svg) {
+        return `<span style="font-size:${fontSizeRem}rem; transform:rotate(${rotationDeg}deg); display:inline-flex; align-items:center; justify-content:center; line-height:1; filter:drop-shadow(0 2px 2px rgba(0,0,0,0.16));">${symObj.svg}</span>`;
+      }
+      return `<span style="font-size:${fontSizeRem}rem; transform:rotate(${rotationDeg}deg); display:inline-block; line-height:1; filter:drop-shadow(0 2px 2px rgba(0,0,0,0.12));">${symObj.icon}</span>`;
+    }
+
+    function renderSymbolMini(symObj) {
+      if (symObj.svg) {
+        return `<span class="inline-flex items-center justify-center text-base leading-none">${symObj.svg}</span>`;
+      }
+      return `<span>${symObj.icon}</span>`;
+    }
+
+    function selectDeckTheme(themeKey) {
+      currentDeckTheme = themeKey;
+      const themeInfo = DECK_THEMES[themeKey];
+      document.getElementById('header-deck-pill').textContent = themeInfo.badge;
+      document.getElementById('lobby-selected-deck-name').textContent = themeInfo.badge;
+
+      ['classic', 'scifi', 'magic', 'heroes'].forEach(key => {
+        const btn = document.getElementById(`deck-btn-${key}`);
+        if (!btn) return;
+        if (key === themeKey) {
+          btn.className = "w-full p-3.5 rounded-2xl text-left border-2 border-indigo-500 bg-indigo-600/20 text-white shadow-lg transition flex items-center justify-between";
+          btn.querySelector('div div:last-child').className = "text-[11px] text-indigo-200 mt-0.5";
+        } else {
+          btn.className = "w-full p-3.5 rounded-2xl text-left border-2 border-slate-800 bg-slate-950/60 text-slate-300 hover:border-slate-700 hover:text-white transition flex items-center justify-between";
+          btn.querySelector('div div:last-child').className = "text-[11px] opacity-75 mt-0.5";
+        }
+      });
+
+      // Atualiza imediatamente se já houver cartas renderizadas
+      if (centerCardSymbols.length > 0) renderArenaCards();
+      if (ttCenterCard.length > 0) renderTabletopBoard();
+      if (currentTab === 'architecture') runMathInspector();
+    }
+
+    function confirmUniverseAndGoToLobby() {
+      showToast(`Baralho ${DECK_THEMES[currentDeckTheme].label} selecionado!`, '🃏');
+      switchTab('lobby');
+    }
+
+    // =========================================================================
+    // 3. SINTETIZADOR DE ÁUDIO WEB AUDIO API (ZERO ARQUIVOS EXTERNOS)
+    // =========================================================================
+    let isMuted = false;
+    let audioCtx = null;
+
+    function playTone(freq, type = 'sine', duration = 0.12, gainVal = 0.14) {
+      if (isMuted) return;
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+        gain.gain.setValueAtTime(gainVal, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {
+        // Ignora bloqueio de autoplay antes do primeiro gesto
+      }
+    }
+
+    function playSoundEffect(kind) {
+      if (kind === 'winRound') {
+        playTone(587.33, 'triangle', 0.12, 0.18);
+        setTimeout(() => playTone(880, 'triangle', 0.18, 0.18), 75);
+      } else if (kind === 'botPoint') {
+        playTone(330, 'sine', 0.12, 0.1);
+        setTimeout(() => playTone(261.63, 'sine', 0.14, 0.1), 70);
+      } else if (kind === 'error') {
+        playTone(155, 'sawtooth', 0.25, 0.16);
+      } else if (kind === 'victory') {
+        [523.25, 659.25, 783.99, 1046.5].forEach((f, idx) => {
+          setTimeout(() => playTone(f, 'triangle', 0.25, 0.2), idx * 110);
+        });
+      }
+    }
+
+    function toggleMute() {
+      isMuted = !isMuted;
+      const btn = document.getElementById('settings-mute-btn');
+      if (btn) {
+        btn.textContent = isMuted ? '🔇 Silenciado' : '🔊 Ativado';
+        btn.className = isMuted
+          ? 'px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 text-xs font-bold transition'
+          : 'px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition';
+      }
+      showToast(isMuted ? 'Áudio silenciado' : 'Efeitos sonoros ativados', isMuted ? '🔇' : '🔊');
+    }
+
+    function toggleSettingsModal() {
+      document.getElementById('settings-modal').classList.toggle('hidden');
+    }
+
+    // =========================================================================
+    // 4. ESTADO GLOBAL DO LOBBY, TEMAS VISUAIS E BOTS (IA)
+    // =========================================================================
+    let currentTab = 'universe';
+    let currentVisualTheme = 'default';
+    let selectedMode = 'online';
+    let botDifficulty = 'medium'; // 'easy' | 'medium' | 'hard'
+
+    const BOT_PROFILES = [
+      { name: 'Bot Alpha 🤖', avatar: '🤖', color: 'emerald' },
+      { name: 'Bot Nova ⚡', avatar: '🦾', color: 'amber' },
+      { name: 'Bot Pixel 🎯', avatar: '👾', color: 'fuchsia' }
+    ];
+
+    const DIFFICULTY_CONFIG = {
+      easy: { label: 'Fácil', minMs: 3800, maxMs: 5500, mistakeChance: 0.18 },
+      medium: { label: 'Médio', minMs: 2300, maxMs: 3600, mistakeChance: 0.10 },
+      hard: { label: 'Difícil', minMs: 1400, maxMs: 2200, mistakeChance: 0.04 }
+    };
+
+    // Estado dos 4 slots do Lobby
+    let lobbySlots = [
+      { id: 0, type: 'human', name: 'Você (Host)', avatar: '😎', color: 'indigo', ping: '0ms' },
+      { id: 1, type: 'bot', name: BOT_PROFILES[0].name, avatar: BOT_PROFILES[0].avatar, color: BOT_PROFILES[0].color, ping: 'IA' },
+      { id: 2, type: 'bot', name: BOT_PROFILES[1].name, avatar: BOT_PROFILES[1].avatar, color: BOT_PROFILES[1].color, ping: 'IA' },
+      { id: 3, type: 'bot', name: BOT_PROFILES[2].name, avatar: BOT_PROFILES[2].avatar, color: BOT_PROFILES[2].color, ping: 'IA' }
+    ];
+
+    function setVisualTheme(themeName) {
+      currentVisualTheme = themeName;
+      document.body.classList.remove('theme-default', 'theme-classic', 'theme-neon', 'theme-wood', 'theme-clean');
+      document.body.classList.add(`theme-${themeName}`);
+
+      ['default', 'classic', 'neon', 'wood', 'clean'].forEach(t => {
+        const btn = document.getElementById(`theme-btn-${t}`);
+        if (!btn) return;
+        if (t === themeName) {
+          btn.className = "theme-pill flex items-center justify-between px-3.5 py-2 rounded-2xl text-xs font-semibold bg-indigo-600 text-white shadow transition";
+        } else {
+          btn.className = "theme-pill flex items-center justify-between px-3.5 py-2 rounded-2xl text-xs font-semibold bg-slate-950/80 border border-slate-800 text-slate-300 hover:text-white transition";
+        }
+      });
+    }
+
+    function setCardShape(shape) {
+      if (shape === 'rounded') {
+        document.body.classList.add('card-shape-rounded');
+        document.getElementById('shape-btn-rounded').className = "py-2 px-3 rounded-xl text-xs font-bold bg-emerald-600 text-white shadow transition";
+        document.getElementById('shape-btn-circle').className = "py-2 px-3 rounded-xl text-xs font-bold bg-slate-950/80 border border-slate-800 text-slate-300 hover:text-white transition";
+      } else {
+        document.body.classList.remove('card-shape-rounded');
+        document.getElementById('shape-btn-circle').className = "py-2 px-3 rounded-xl text-xs font-bold bg-emerald-600 text-white shadow transition";
+        document.getElementById('shape-btn-rounded').className = "py-2 px-3 rounded-xl text-xs font-bold bg-slate-950/80 border border-slate-800 text-slate-300 hover:text-white transition";
+      }
+    }
+
+    function setDeckOrder(order) {
+      currentDeckOrder = order;
+      FULL_DECK = generateSpotItDeck(order);
+
+      const btn7 = document.getElementById('order-btn-7');
+      const btn5 = document.getElementById('order-btn-5');
+      if (order === 7) {
+        btn7.className = "py-2 px-3 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow transition";
+        btn5.className = "py-2 px-3 rounded-xl text-xs font-bold bg-slate-950/80 border border-slate-800 text-slate-300 hover:text-white transition";
+      } else {
+        btn5.className = "py-2 px-3 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow transition";
+        btn7.className = "py-2 px-3 rounded-xl text-xs font-bold bg-slate-950/80 border border-slate-800 text-slate-300 hover:text-white transition";
+      }
+
+      document.getElementById('inspect-card-a').max = FULL_DECK.length - 1;
+      document.getElementById('inspect-card-b').max = FULL_DECK.length - 1;
+      document.getElementById('inspect-card-a').value = 0;
+      document.getElementById('inspect-card-b').value = Math.min(14, FULL_DECK.length - 1);
+
+      showToast(`Modo ${order === 7 ? 'Clássico (8 símbolos)' : 'Rápido (6 símbolos)'} ativado!`, '🃏');
+      if (currentTab === 'arena') initArenaGame();
+      if (currentTab === 'tabletop') resetTabletopGame();
+      if (currentTab === 'architecture') runMathInspector();
+    }
+
+    function switchTab(tabName) {
+      currentTab = tabName;
+      document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-indigo-600', 'text-white', 'shadow');
+        btn.classList.add('text-slate-400');
+      });
+
+      document.getElementById(`view-${tabName}`).classList.remove('hidden');
+      const activeBtn = document.getElementById(`tab-${tabName}`);
+      activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow');
+      activeBtn.classList.remove('text-slate-400');
+
+      if (tabName === 'arena' && arenaPlayers.length === 0) {
+        initArenaGame();
+      }
+      if (tabName === 'tabletop') {
+        resetTabletopGame();
+      }
+      if (tabName === 'architecture') {
+        runMathInspector();
+      }
+    }
+
+    let toastTimeout = null;
+    function showToast(msg, icon = '✨') {
+      const container = document.getElementById('toast-container');
+      document.getElementById('toast-msg').textContent = msg;
+      document.getElementById('toast-icon').textContent = icon;
+      container.classList.remove('opacity-0', 'translate-y-4');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        container.classList.add('opacity-0', 'translate-y-4');
+      }, 2400);
+    }
+
+    function regenerateRoomCode() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let code = '';
+      for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
+      document.getElementById('room-code-display').textContent = code;
+      document.getElementById('qr-room-code').textContent = code;
+      showToast(`Nova sala criada: ${code}`, '🔑');
+    }
+
+    function copyInviteLink() {
+      const code = document.getElementById('room-code-display').textContent;
+      const url = `https://seu-usuario.github.io/olho-vivo/?sala=${code}`;
+      const tempInput = document.createElement('input');
+      tempInput.value = url;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+      showToast('Link do Olho Vivo copiado! Envie para até 3 amigos.', '📋');
+    }
+    // Coordenadas harmoniosas para 8 ou 6 símbolos dentro da carta
+    const SYMBOL_LAYOUT_8 = [
+      { x: 50, y: 50, scale: 1.18 }, // Centro destaque
+      { x: 50, y: 18, scale: 0.92 }, // Topo
+      { x: 77, y: 27, scale: 0.88 }, // Topo-Dir
+      { x: 83, y: 55, scale: 0.95 }, // Dir
+      { x: 71, y: 80, scale: 0.86 }, // Baixo-Dir
+      { x: 43, y: 83, scale: 0.94 }, // Baixo
+      { x: 20, y: 68, scale: 0.88 }, // Baixo-Esq
+      { x: 22, y: 34, scale: 0.95 }  // Topo-Esq
+    ];
+
+    const SYMBOL_LAYOUT_6 = [
+      { x: 50, y: 50, scale: 1.24 }, // Centro destaque
+      { x: 50, y: 19, scale: 0.98 }, // Topo
+      { x: 79, y: 35, scale: 0.95 }, // Topo-Dir
+      { x: 76, y: 71, scale: 0.96 }, // Baixo-Dir
+      { x: 27, y: 74, scale: 0.95 }, // Baixo-Esq
+      { x: 22, y: 36, scale: 0.98 }  // Topo-Esq
+    ];
+
+    function getActiveLayout() {
+      return currentDeckOrder === 5 ? SYMBOL_LAYOUT_6 : SYMBOL_LAYOUT_8;
+    }
+
+    function selectGameMode(mode) {
+      selectedMode = mode;
+      const btnOnline = document.getElementById('mode-btn-online');
+      const btnLocal = document.getElementById('mode-btn-local');
+      if (mode === 'online') {
+        btnOnline.className = "py-2 px-2.5 rounded-xl text-left transition bg-indigo-600 text-white shadow";
+        btnLocal.className = "py-2 px-2.5 rounded-xl text-left transition text-slate-400 hover:text-white";
+      } else {
+        btnLocal.className = "py-2 px-2.5 rounded-xl text-left transition bg-indigo-600 text-white shadow";
+        btnOnline.className = "py-2 px-2.5 rounded-xl text-left transition text-slate-400 hover:text-white";
+      }
+    }
+
+    function renderLobbySlots() {
+      const list = document.getElementById('lobby-players-list');
+      const activeCount = lobbySlots.filter(s => s.type !== 'empty').length;
+      document.getElementById('lobby-player-count-label').textContent = `Jogadores na Sala (${activeCount}/4)`;
+
+      list.innerHTML = lobbySlots.map((slot, index) => {
+        if (slot.type === 'human') {
+          return `
+            <div class="flex items-center justify-between bg-slate-950/90 border border-indigo-500/40 px-3 py-2 rounded-2xl">
+              <div class="flex items-center gap-2.5">
+                <span class="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-base">${slot.avatar}</span>
+                <div>
+                  <input type="text" value="${slot.name}" maxlength="16" onchange="updateHostName(this.value)" class="bg-transparent text-xs font-bold text-white focus:outline-none border-b border-transparent focus:border-indigo-400 w-32" />
+                  <div class="text-[10px] text-emerald-400 font-semibold">● Conectado (Você)</div>
+                </div>
+              </div>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-indigo-500/20 text-indigo-300">HOST</span>
+            </div>
+          `;
+        }
+
+        if (slot.type === 'bot') {
+          return `
+            <div class="flex items-center justify-between bg-slate-950/80 border border-slate-800 px-3 py-2 rounded-2xl">
+              <div class="flex items-center gap-2.5">
+                <span class="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-base">${slot.avatar}</span>
+                <div>
+                  <div class="text-xs font-bold text-slate-100">${slot.name}</div>
+                  <div class="text-[10px] text-amber-400 font-semibold">● IA Pronta (${DIFFICULTY_CONFIG[botDifficulty].label})</div>
+                </div>
+              </div>
+              <button onclick="toggleLobbySlot(${index})" class="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-rose-500/20 hover:text-rose-300 text-slate-300 border border-slate-700 transition">
+                Remover Bot
+              </button>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="flex items-center justify-between bg-slate-950/40 border border-dashed border-slate-800 px-3 py-2 rounded-2xl">
+            <div class="flex items-center gap-2.5">
+              <span class="w-8 h-8 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-sm text-slate-500">⏳</span>
+              <div>
+                <div class="text-xs font-semibold text-slate-400">Slot ${index + 1} Livre</div>
+                <div class="text-[10px] text-slate-500">Aguardando link ou Bot</div>
+              </div>
+            </div>
+            <button onclick="toggleLobbySlot(${index})" class="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/40 transition">
+              + Adicionar Bot
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function updateHostName(val) {
+      const clean = val.trim() || 'Você (Host)';
+      lobbySlots[0].name = clean;
+    }
+
+    function toggleLobbySlot(index) {
+      if (index === 0) return;
+      const slot = lobbySlots[index];
+      if (slot.type === 'bot') {
+        slot.type = 'empty';
+      } else {
+        const botPreset = BOT_PROFILES[index - 1];
+        slot.type = 'bot';
+        slot.name = botPreset.name;
+        slot.avatar = botPreset.avatar;
+        slot.color = botPreset.color;
+      }
+      renderLobbySlots();
+    }
+
+    function setBotPreset(botCount) {
+      for (let i = 1; i <= 3; i++) {
+        if (i <= botCount) {
+          const botPreset = BOT_PROFILES[i - 1];
+          lobbySlots[i] = { id: i, type: 'bot', name: botPreset.name, avatar: botPreset.avatar, color: botPreset.color, ping: 'IA' };
+        } else {
+          lobbySlots[i] = { id: i, type: 'empty', name: '', avatar: '', color: 'slate', ping: '' };
+        }
+      }
+      renderLobbySlots();
+      showToast(`Configurado para jogar contra ${botCount} Bot(s)`, '🤖');
+    }
+
+    function setBotDifficulty(diff) {
+      botDifficulty = diff;
+      const cfg = DIFFICULTY_CONFIG[diff];
+      document.getElementById('bot-reaction-hint').textContent = `Reação: ${(cfg.minMs / 1000).toFixed(1)}s – ${(cfg.maxMs / 1000).toFixed(1)}s`;
+
+      ['easy', 'medium', 'hard'].forEach(d => {
+        const btn = document.getElementById(`diff-btn-${d}`);
+        if (d === diff) {
+          btn.className = "py-2 px-2 rounded-xl text-center border border-indigo-500/60 bg-indigo-600/25 text-white shadow transition";
+        } else {
+          btn.className = "py-2 px-2 rounded-xl text-center border border-slate-800 bg-slate-900 text-slate-400 hover:text-white transition";
+        }
+      });
+      renderLobbySlots();
+    }
+
+    function startMatchFromLobby() {
+      const activePlayers = lobbySlots.filter(s => s.type !== 'empty');
+      if (activePlayers.length < 2) {
+        showToast('Adicione pelo menos 1 Bot para iniciar!', '⚠️');
+        return;
+      }
+      if (selectedMode === 'local') {
+        switchTab('tabletop');
+      } else {
+        switchTab('arena');
+        initArenaGame();
+      }
+    }
+
+    // =========================================================================
+    // 5. MOTOR DO JOGO EM TEMPO REAL (ARENA ONLINE + BOTS IA)
+    // =========================================================================
+    let arenaPlayers = [];
+    let centerCardSymbols = [];
+    let centerPileCount = 1;
+    let isPenaltyLocked = false;
+    let isCountdownActive = false;
+    let penaltyInterval = null;
+    let countdownInterval = null;
+    let botTimers = [];
+    let botProgressRaf = null;
+    let roundStartTime = 0;
+    let humanReactionTimes = [];
+    let humanStreak = 0;
+    let isMatchFinished = false;
+
+    function shuffleArray(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function clearBotLoops() {
+      botTimers.forEach(t => clearTimeout(t));
+      botTimers = [];
+      if (botProgressRaf) cancelAnimationFrame(botProgressRaf);
+    }
+
+    function initArenaGame() {
+      clearBotLoops();
+      clearInterval(penaltyInterval);
+      clearInterval(countdownInterval);
+      isPenaltyLocked = false;
+      isMatchFinished = false;
+      humanReactionTimes = [];
+      humanStreak = 0;
+      updateStreakBadge();
+
+      document.getElementById('penalty-overlay').classList.add('hidden');
+      document.getElementById('podium-modal').classList.add('hidden');
+      document.getElementById('center-card-owner-badge').textContent = 'Carta Central (Alvo)';
+      // Usa 55 cartas (ordem 7) ou 31 cartas (ordem 5 - partida rápida)
+      const deckLimit = currentDeckOrder === 7 ? 55 : FULL_DECK.length;
+      const shuffledDeck = shuffleArray(FULL_DECK).slice(0, deckLimit);
+      centerCardSymbols = shuffledDeck.pop();
+      centerPileCount = 1;
+
+      const activeSlots = lobbySlots.filter(s => s.type !== 'empty');
+      if (activeSlots.length < 2) {
+        setBotPreset(3);
+      }
+      const participants = lobbySlots.filter(s => s.type !== 'empty');
+      const cardsPerPlayer = Math.floor(shuffledDeck.length / participants.length);
+
+      arenaPlayers = participants.map((p, idx) => ({
+        id: p.id,
+        name: p.name,
+        avatar: p.avatar,
+        isBot: p.type === 'bot',
+        pile: shuffledDeck.slice(idx * cardsPerPlayer, (idx + 1) * cardsPerPlayer),
+        finishedOrder: null,
+        botTargetMs: 0,
+        botStartMs: 0
+      }));
+
+      document.getElementById('arena-ping-badge').textContent = DIFFICULTY_CONFIG[botDifficulty].label;
+      updateArenaScoreboard();
+      renderCenterCardOnly();
+      renderPlayerCardOnly();
+      startPreMatchCountdown();
+    }
+
+    function startPreMatchCountdown() {
+      isCountdownActive = true;
+      const overlay = document.getElementById('countdown-overlay');
+      const numEl = document.getElementById('countdown-number');
+      overlay.classList.remove('hidden');
+
+      let count = 3;
+      numEl.textContent = count;
+      playTone(440, 'sine', 0.12, 0.12);
+
+      countdownInterval = setInterval(() => {
+        count--;
+        if (count > 0) {
+          numEl.textContent = count;
+          playTone(440, 'sine', 0.12, 0.12);
+        } else if (count === 0) {
+          numEl.textContent = 'JÁ!';
+          playTone(880, 'triangle', 0.2, 0.18);
+        } else {
+          clearInterval(countdownInterval);
+          overlay.classList.add('hidden');
+          isCountdownActive = false;
+          scheduleBotsForRound();
+        }
+      }, 650);
+    }
+
+    function updateStreakBadge() {
+      const badge = document.getElementById('streak-badge');
+      const countEl = document.getElementById('streak-count');
+      if (humanStreak >= 2) {
+        badge.classList.remove('hidden');
+        badge.classList.add('flex');
+        countEl.textContent = humanStreak;
+      } else {
+        badge.classList.add('hidden');
+        badge.classList.remove('flex');
+      }
+    }
+
+    function updateArenaScoreboard() {
+      const board = document.getElementById('arena-scoreboard');
+      document.getElementById('arena-deck-count').textContent = `${centerPileCount} ${centerPileCount === 1 ? 'carta' : 'cartas'}`;
+
+      const human = arenaPlayers.find(p => !p.isBot);
+      if (human) {
+        document.getElementById('player-remaining-label').textContent = human.pile.length;
+        const footer = document.getElementById('player-hand-footer');
+        if (human.pile.length === 1) {
+          footer.innerHTML = `<span class="text-rose-400 animate-pulse">🔥 ÚLTIMA CARTA!</span>`;
+        } else {
+          footer.innerHTML = `Sua Carta (<span id="player-remaining-label">${human.pile.length}</span> restantes)`;
+        }
+      }
+
+      board.innerHTML = arenaPlayers.map(p => {
+        const isMe = !p.isBot;
+        const isLastCard = p.pile.length === 1;
+        const borderClass = isLastCard
+          ? 'last-card-alert bg-rose-950/40'
+          : (isMe ? 'border-indigo-500/60 bg-indigo-950/50' : 'border-slate-800 bg-slate-950/80');
+        return `
+          <div class="rounded-xl border ${borderClass} p-1.5 text-center relative overflow-hidden transition-all">
+            <div class="text-xs leading-none mb-0.5">${p.avatar}</div>
+            <div class="text-[10px] font-bold text-slate-200 truncate">${p.name.replace(' (Host)', '')}</div>
+            <div class="text-xs font-extrabold ${isLastCard ? 'text-rose-400' : (p.pile.length <= 3 ? 'text-emerald-400' : 'text-amber-300')}">
+              ${isLastCard ? '🔥 1!' : `${p.pile.length} <span class="text-[9px] font-normal text-slate-400">cartas</span>`}
+            </div>
+            ${p.isBot ? `<div class="w-full h-1 bg-slate-800 rounded-full mt-1 overflow-hidden"><div id="bot-bar-${p.id}" class="h-full bg-amber-400 w-0 transition-none"></div></div>` : `<div class="w-full h-1 bg-indigo-500/30 rounded-full mt-1"></div>`}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderCardContent(containerEl, symbolIds, isClickable) {
+      const pool = getActiveSymbolsPool();
+      const shuffledSymbols = shuffleArray(symbolIds);
+      const layout = shuffleArray(getActiveLayout());
+
+      containerEl.innerHTML = shuffledSymbols.map((symId, idx) => {
+        const symObj = pool[symId];
+        const pos = layout[idx];
+        const rot = Math.floor(Math.random() * 360);
+        const fontSize = (1.65 * pos.scale).toFixed(2);
+
+        if (isClickable) {
+          return `
+            <button
+              type="button"
+              onclick="handlePlayerSymbolClick(${symId})"
+              data-sym-id="${symId}"
+              style="left:${pos.x}%; top:${pos.y}%; width:54px; height:54px;"
+              class="symbol-btn"
+              title="${symObj.name}"
+            >
+              ${renderSymbolGraphic(symObj, fontSize, rot)}
+            </button>
+          `;
+        } else {
+          return `
+            <div
+              data-sym-id="${symId}"
+              style="left:${pos.x}%; top:${pos.y}%; width:52px; height:52px;"
+              class="symbol-btn pointer-events-none"
+            >
+              ${renderSymbolGraphic(symObj, fontSize, rot)}
+            </div>
+          `;
+        }
+      }).join('');
+    }
+
+    function renderCenterCardOnly() {
+      const centerContainer = document.getElementById('center-card-symbols');
+      renderCardContent(centerContainer, centerCardSymbols, false);
+
+      const centerEl = document.getElementById('center-card');
+      centerEl.classList.remove('animate-card-in');
+      void centerEl.offsetWidth;
+      centerEl.classList.add('animate-card-in');
+    }
+
+    function renderPlayerCardOnly() {
+      const playerContainer = document.getElementById('player-card-symbols');
+      const human = arenaPlayers.find(p => !p.isBot);
+      if (human && human.pile.length > 0) {
+        renderCardContent(playerContainer, human.pile[0], true);
+        const playerEl = document.getElementById('player-card');
+        playerEl.classList.remove('animate-pop');
+        void playerEl.offsetWidth;
+        playerEl.classList.add('animate-pop');
+      }
+    }
+
+    function renderArenaCards() {
+      renderCenterCardOnly();
+      renderPlayerCardOnly();
+    }
+
+    function scheduleBotsForRound() {
+      clearBotLoops();
+      if (isMatchFinished) return;
+      roundStartTime = performance.now();
+
+      const cfg = DIFFICULTY_CONFIG[botDifficulty];
+      const bots = arenaPlayers.filter(p => p.isBot && p.pile.length > 0);
+
+      bots.forEach(bot => {
+        const reactionMs = cfg.minMs + Math.random() * (cfg.maxMs - cfg.minMs);
+        bot.botStartMs = performance.now();
+        bot.botTargetMs = reactionMs;
+
+        const timer = setTimeout(() => {
+          if (isMatchFinished) return;
+          // Chance realista do Bot errar e perder 1.2s
+          if (Math.random() < cfg.mistakeChance) {
+            document.getElementById('round-status-banner').innerHTML = `<span class="text-amber-300">😅 ${bot.name} errou o símbolo e travou!</span>`;
+            const retryTimer = setTimeout(() => {
+              if (!isMatchFinished) executeBotScore(bot);
+            }, 1300);
+            botTimers.push(retryTimer);
+          } else {
+            executeBotScore(bot);
+          }
+        }, reactionMs);
+
+        botTimers.push(timer);
+      });
+
+      function animateBotBars() {
+        if (isMatchFinished) return;
+        const now = performance.now();
+        bots.forEach(bot => {
+          const bar = document.getElementById(`bot-bar-${bot.id}`);
+          if (bar && bot.botTargetMs > 0) {
+            const pct = Math.min(100, ((now - bot.botStartMs) / bot.botTargetMs) * 100);
+            bar.style.width = `${pct}%`;
+          }
+        });
+        botProgressRaf = requestAnimationFrame(animateBotBars);
+      }
+      botProgressRaf = requestAnimationFrame(animateBotBars);
+    }
+
+    function executeBotScore(bot) {
+      if (isMatchFinished || isCountdownActive || bot.pile.length === 0) return;
+
+      humanStreak = 0;
+      updateStreakBadge();
+
+      const playedCard = bot.pile.shift();
+      centerCardSymbols = playedCard;
+      centerPileCount++;
+      playSoundEffect('botPoint');
+
+      document.getElementById('center-card-owner-badge').textContent = `Carta de ${bot.name.split(' ')[0]}`;
+      document.getElementById('round-status-banner').innerHTML = `<span class="text-amber-400 font-bold">⚡ ${bot.name} jogou! Sua carta continua igual, busque o novo par!</span>`;
+      updateArenaScoreboard();
+
+      if (bot.pile.length === 0) {
+        finishArenaMatch(bot);
+        return;
+      }
+
+      // UX Sênior: Atualiza APENAS a carta central para não destruir o mapa mental da carta do jogador
+      renderCenterCardOnly();
+      scheduleBotsForRound();
+    }
+
+    function handlePlayerSymbolClick(clickedSymId) {
+      if (isPenaltyLocked || isMatchFinished || isCountdownActive) return;
+      const human = arenaPlayers.find(p => !p.isBot);
+      if (!human || human.pile.length === 0) return;
+
+      const isMatch = centerCardSymbols.includes(clickedSymId);
+
+      if (isMatch) {
+        const reactionSec = (performance.now() - roundStartTime) / 1000;
+        humanReactionTimes.push(reactionSec);
+        humanStreak++;
+        updateStreakBadge();
+
+        // Micro-feedback visual imediato nos dois símbolos conectados antes de trocar
+        document.querySelectorAll(`[data-sym-id="${clickedSymId}"]`).forEach(el => {
+          el.classList.add('ring-4', 'ring-emerald-400', 'bg-emerald-400/35', 'scale-125');
+        });
+
+        const playedCard = human.pile.shift();
+        centerCardSymbols = playedCard;
+        centerPileCount++;
+        playSoundEffect('winRound');
+
+        const symObj = getActiveSymbolsPool()[clickedSymId];
+        document.getElementById('center-card-owner-badge').textContent = 'Sua Carta no Topo';
+        document.getElementById('round-status-banner').innerHTML = `<span class="text-emerald-400 font-bold">✅ Par (${symObj.name}) em ${reactionSec.toFixed(2)}s!</span>`;
+        updateArenaScoreboard();
+
+        if (human.pile.length === 0) {
+          finishArenaMatch(human);
+          return;
+        }
+
+        // Pequeno respiro de 140ms para o olho registrar a confirmação do par
+        clearBotLoops();
+        setTimeout(() => {
+          if (isMatchFinished) return;
+          renderCenterCardOnly();
+          renderPlayerCardOnly();
+          scheduleBotsForRound();
+        }, 140);
+      } else {
+        humanStreak = 0;
+        updateStreakBadge();
+        triggerPenaltyLock();
+      }
+    }
+
+    function triggerPenaltyLock() {
+      isPenaltyLocked = true;
+      playSoundEffect('error');
+      if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
+
+      const playerCard = document.getElementById('player-card');
+      const overlay = document.getElementById('penalty-overlay');
+      const timerLabel = document.getElementById('penalty-timer');
+
+      playerCard.classList.remove('animate-shake');
+      void playerCard.offsetWidth;
+      playerCard.classList.add('animate-shake');
+      overlay.classList.remove('hidden');
+
+      let remaining = 1.5;
+      timerLabel.textContent = `Bloqueado ${remaining.toFixed(1)}s`;
+
+      clearInterval(penaltyInterval);
+      penaltyInterval = setInterval(() => {
+        remaining -= 0.1;
+        if (remaining <= 0) {
+          clearInterval(penaltyInterval);
+          isPenaltyLocked = false;
+          overlay.classList.add('hidden');
+        } else {
+          timerLabel.textContent = `Bloqueado ${remaining.toFixed(1)}s`;
+        }
+      }, 100);
+    }
+
+    function highlightHint() {
+      if (isMatchFinished) return;
+      const human = arenaPlayers.find(p => !p.isBot);
+      if (!human || human.pile.length === 0) return;
+
+      const commonId = human.pile[0].find(id => centerCardSymbols.includes(id));
+      if (commonId === undefined) return;
+
+      document.querySelectorAll(`[data-sym-id="${commonId}"]`).forEach(el => {
+        el.classList.add('ring-4', 'ring-emerald-400', 'bg-emerald-400/25', 'scale-125');
+        setTimeout(() => {
+          el.classList.remove('ring-4', 'ring-emerald-400', 'bg-emerald-400/25', 'scale-125');
+        }, 900);
+      });
+    }
+
+    function finishArenaMatch(winner) {
+      isMatchFinished = true;
+      clearBotLoops();
+      playSoundEffect('victory');
+
+      const sorted = [...arenaPlayers].sort((a, b) => a.pile.length - b.pile.length);
+      const humanWon = !winner.isBot;
+
+      document.getElementById('podium-trophy').textContent = humanWon ? '🏆' : '🥈';
+      document.getElementById('podium-title').textContent = humanWon ? 'Você Venceu!' : `${winner.name} Venceu!`;
+      document.getElementById('podium-subtitle').textContent = humanWon
+        ? 'Reflexo impecável! Sua pilha zerou primeiro.'
+        : 'Por pouco! Tente novamente ou ajuste a dificuldade.';
+
+      const avgSec = humanReactionTimes.length > 0
+        ? (humanReactionTimes.reduce((a, b) => a + b, 0) / humanReactionTimes.length).toFixed(2) + 's'
+        : '--';
+      document.getElementById('podium-avg-reaction').textContent = avgSec;
+      document.getElementById('podium-diff-label').textContent = DIFFICULTY_CONFIG[botDifficulty].label;
+
+      const medals = ['🥇', '🥈', '🥉', '4º'];
+      document.getElementById('podium-rankings').innerHTML = sorted.map((p, idx) => `
+        <div class="flex items-center justify-between px-3.5 py-2 rounded-xl border ${!p.isBot ? 'bg-indigo-600/25 border-indigo-500/50' : 'bg-slate-900 border-slate-800'}">
+          <div class="flex items-center gap-2">
+            <span class="text-base">${medals[idx]}</span>
+            <span class="text-sm">${p.avatar}</span>
+            <span class="text-xs font-bold text-white">${p.name}</span>
+          </div>
+          <span class="text-xs font-extrabold ${p.pile.length === 0 ? 'text-emerald-400' : 'text-slate-400'}">
+            ${p.pile.length === 0 ? 'Zerou!' : `${p.pile.length} restantes`}
+          </span>
+        </div>
+      `).join('');
+
+      document.getElementById('podium-modal').classList.remove('hidden');
+    }
+
+    function playAgainFromPodium() {
+      initArenaGame();
+    }
+
+    function closePodiumAndLobby() {
+      document.getElementById('podium-modal').classList.add('hidden');
+      switchTab('lobby');
+    }
+
+    // =========================================================================
+    // 6. MODO MESA LOCAL (4 JOGADORES NO MESMO APARELHO)
+    // =========================================================================
+    let ttDeck = [];
+    let ttCenterCard = [];
+    let ttPlayerCards = [[], [], [], []];
+    let ttScores = [0, 0, 0, 0];
+
+    function resetTabletopGame() {
+      const deckLimit = currentDeckOrder === 7 ? 55 : FULL_DECK.length;
+      ttDeck = shuffleArray(FULL_DECK).slice(0, deckLimit);
+      ttCenterCard = ttDeck.pop();
+      ttScores = [0, 0, 0, 0];
+      for (let i = 0; i < 4; i++) {
+        ttPlayerCards[i] = ttDeck.pop();
+        document.getElementById(`tt-score-${i}`).textContent = '0';
+      }
+      renderTabletopBoard();
+    }
+
+    function renderMiniCard(containerEl, symbolIds, playerIndex) {
+      const pool = getActiveSymbolsPool();
+      const layout = getActiveLayout();
+      containerEl.innerHTML = `<div class="game-card-ring"></div>` + symbolIds.map((symId, idx) => {
+        const symObj = pool[symId];
+        const pos = layout[idx];
+        const rot = (symId * 47) % 360;
+        const size = (0.88 * pos.scale).toFixed(2);
+        if (playerIndex !== null) {
+          return `
+            <button
+              type="button"
+              onclick="handleTabletopClick(${playerIndex}, ${symId})"
+              style="left:${pos.x}%; top:${pos.y}%; width:28px; height:28px;"
+              class="symbol-btn"
+            >
+              ${renderSymbolGraphic(symObj, size, rot)}
+            </button>
+          `;
+        }
+        return `
+          <div style="left:${pos.x}%; top:${pos.y}%; width:30px; height:30px;" class="symbol-btn pointer-events-none">
+            ${renderSymbolGraphic(symObj, (size * 1.12).toFixed(2), rot)}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderTabletopBoard() {
+      document.getElementById('tt-deck-badge').textContent = `${ttDeck.length} cartas`;
+      renderMiniCard(document.getElementById('tt-center-card'), ttCenterCard, null);
+      for (let i = 0; i < 4; i++) {
+        renderMiniCard(document.getElementById(`tt-card-${i}`), ttPlayerCards[i], i);
+      }
+    }
+
+    function handleTabletopClick(playerIdx, symId) {
+      if (ttCenterCard.includes(symId)) {
+        playSoundEffect('winRound');
+        ttScores[playerIdx]++;
+        document.getElementById(`tt-score-${playerIdx}`).textContent = ttScores[playerIdx];
+        ttCenterCard = ttPlayerCards[playerIdx];
+
+        if (ttDeck.length > 0) {
+          ttPlayerCards[playerIdx] = ttDeck.pop();
+          renderTabletopBoard();
+        } else {
+          showToast(`Fim de baralho! P${playerIdx + 1} venceu com ${ttScores[playerIdx]} pts!`, '🏆');
+          resetTabletopGame();
+        }
+      } else {
+        playSoundEffect('error');
+        const cardEl = document.getElementById(`tt-card-${playerIdx}`);
+        cardEl.classList.remove('animate-shake');
+        void cardEl.offsetWidth;
+        cardEl.classList.add('animate-shake');
+      }
+    }
+
+    // =========================================================================
+    // 7. INSPETOR MATEMÁTICO DO PLANO DE FANO (ABA 4)
+    // =========================================================================
+    function runMathInspector() {
+      const maxCardIdx = FULL_DECK.length - 1;
+      const idxA = Math.max(0, Math.min(maxCardIdx, parseInt(document.getElementById('inspect-card-a').value, 10) || 0));
+      const idxB = Math.max(0, Math.min(maxCardIdx, parseInt(document.getElementById('inspect-card-b').value, 10) || 0));
+      const pool = getActiveSymbolsPool();
+
+      const cardA = FULL_DECK[idxA];
+      const cardB = FULL_DECK[idxB];
+      const intersection = cardA.filter(id => cardB.includes(id));
+
+      const renderBadges = (ids) => ids.map(id => {
+        const isCommon = intersection.includes(id);
+        return `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold ${isCommon ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-500/50' : 'bg-slate-800 text-slate-300'}">${renderSymbolMini(pool[id])}</span>`;
+      }).join(' ');
+
+      document.getElementById('math-inspector-result').innerHTML = `
+        <div class="mb-2">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Carta #${idxA}:</span>
+          <div class="flex flex-wrap gap-1">${renderBadges(cardA)}</div>
+        </div>
+        <div class="mb-2">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Carta #${idxB}:</span>
+          <div class="flex flex-wrap gap-1">${renderBadges(cardB)}</div>
+        </div>
+        <div class="pt-2 border-t border-slate-800 flex items-center justify-between">
+          <span class="text-slate-400">Interseção encontrada:</span>
+          <span class="font-bold text-emerald-400">
+            ${intersection.length === 1
+              ? `1 único símbolo (${pool[intersection[0]].name})`
+              : `${intersection.length} símbolos (mesma carta)`}
+          </span>
+        </div>
+      `;
+    }
+
+    // Inicialização ao carregar a página
+    window.addEventListener('DOMContentLoaded', () => {
+      renderLobbySlots();
+      runMathInspector();
+    });
+  </script>
+</body>
+</html>
